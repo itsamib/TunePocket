@@ -3,9 +3,7 @@
 import { useState, useEffect } from 'react';
 
 // This hook is now simplified. It only cares about the initial start_param.
-// Re-triggering based on hash changes is removed because it was unreliable
-// and the new flow in TunePocketApp handles clearing the start_param from the URL
-// to prevent re-processing.
+// Re-triggering based on hash changes is handled more robustly in TunePocketApp.
 export const useTelegram = () => {
   const [tg, setTg] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
@@ -37,28 +35,18 @@ export const useTelegram = () => {
           if (!param) {
             param = telegramApp.initDataUnsafe?.start_param;
           }
-        }
-        
-        if (param) {
-          setStartParam(param);
+
+          if (param) {
+            setStartParam(param);
+          }
         }
     }
     
     init();
 
-    // Listen for hash changes to catch deep links when the app is already open
-    const handleHashChange = () => {
-        const newParam = getParamFromHash();
-        if (newParam) {
-            setStartParam(newParam);
-        }
-    };
-    
-    window.addEventListener('hashchange', handleHashChange);
-    
-    return () => {
-        window.removeEventListener('hashchange', handleHashChange);
-    };
+    // The component using this hook (TunePocketApp) will now be responsible
+    // for listening to hash changes if it needs to react to them while
+    // the app is already running. This simplifies the hook's purpose.
 
   }, []);
 

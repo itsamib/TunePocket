@@ -32,7 +32,7 @@ const getMmb = (): Promise<typeof window.musicMetadataBrowser> => {
 
 
 export default function TunePocketApp() {
-  const { tg, user, startParam } = useTelegram();
+  const { tg, user } = useTelegram();
   const [songs, setSongs] = useState<Song[]>([]);
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -49,18 +49,6 @@ export default function TunePocketApp() {
       toast({ title: "Error", description: "Could not load song library.", variant: "destructive" });
     }
   }, [toast]);
-
-  useEffect(() => {
-    const initialize = async () => {
-      setIsLoading(true);
-      setProcessingMessage('Initializing...');
-      await initDB();
-      await loadSongs();
-      setIsLoading(false);
-      setProcessingMessage('');
-    };
-    initialize();
-  }, [loadSongs]);
 
   const processFile = useCallback(async (file: File | Blob, fileName?: string, chatId?: string) => {
     if (file.size > 50 * 1024 * 1024) { // 50MB limit
@@ -122,56 +110,94 @@ export default function TunePocketApp() {
       setProcessingMessage('');
     }
   }, [loadSongs, toast]);
+
+  const downloadAndProcessFromTg = useCallback(async (param: string) => {
+    setIsLoading(true);
+    setProcessingMessage('Downloading from Telegram...');
+    try {
+      const [fileId, chatId] = param.split('_');
+      if (!fileId || !chatId) {
+        throw new Error('Invalid start parameter from Telegram.');
+      }
+
+      const response = await getTelegramFile({ fileId });
+      if (!response.ok) throw new Error('Failed to download file from Telegram');
+      
+      const blob = await response.blob();
+      
+      let fileName = 'telegram-song.mp3';
+      const contentDisposition = response.headers.get('content-disposition');
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch && filenameMatch[1]) {
+            fileName = filenameMatch[1];
+        }
+      }
+      
+      await processFile(blob, fileName, chatId);
+      
+      // Clear startParam from URL only on success
+      if (window.history.pushState) {
+        const url = new URL(window.location.href);
+        const params = new URLSearchParams(url.hash.slice(1));
+        if (params.get('tgWebAppStartParam') === param) {
+          params.delete('tgWebAppStartParam');
+          url.hash = params.toString();
+          window.history.replaceState({}, document.title, url.toString());
+        }
+      }
+
+    } catch (error: any) {
+      console.error("Error fetching from Telegram via flow:", error);
+      toast({ title: "Download Failed", description: error.message || "Could not download the song from Telegram.", variant: "destructive" });
+    } finally {
+        setIsLoading(false);
+        setProcessingMessage('');
+    }
+  }, [processFile, toast]);
+
   
   useEffect(() => {
-    const downloadAndProcess = async (param: string) => {
-        setIsLoading(true);
-        setProcessingMessage('Downloading from Telegram...');
-        try {
-          const [fileId, chatId] = param.split('_');
-          if (!fileId || !chatId) {
-            throw new Error('Invalid start parameter from Telegram.');
-          }
+    const initialize = async () => {
+      setIsLoading(true);
+      setProcessingMessage('Initializing...');
+      await initDB();
+      await loadSongs();
 
-          const response = await getTelegramFile({ fileId });
-          if (!response.ok) throw new Error('Failed to download file from Telegram');
-          
-          const blob = await response.blob();
-          
-          let fileName = 'telegram-song.mp3';
-          const contentDisposition = response.headers.get('content-disposition');
-          if (contentDisposition) {
-            const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-            if (filenameMatch && filenameMatch[1]) {
-                fileName = filenameMatch[1];
-            }
-          }
-          
-          await processFile(blob, fileName, chatId);
-          
-          // Clear startParam from URL only on success
-          if (window.history.pushState) {
-            const url = new URL(window.location.href);
-            const params = new URLSearchParams(url.hash.slice(1));
-            params.delete('tgWebAppStartParam');
-            url.hash = params.toString();
-            window.history.pushState({}, document.title, url.toString());
-          }
+      const getParamFromHash = () => {
+        const hash = window.location.hash;
+        const urlParams = new URLSearchParams(hash.slice(1));
+        return urlParams.get('tgWebAppStartParam');
+      }
 
-        } catch (error) {
-          console.error("Error fetching from Telegram via flow:", error);
-          toast({ title: "Download Failed", description: "Could not download the song from Telegram.", variant: "destructive" });
-        } finally {
-            setIsLoading(false);
-            setProcessingMessage('');
+      const initialParam = getParamFromHash() || (tg?.initDataUnsafe?.start_param);
+      if (initialParam) {
+        await downloadAndProcessFromTg(initialParam);
+      }
+
+      setIsLoading(false);
+      setProcessingMessage('');
+    };
+    initialize();
+  }, [loadSongs, downloadAndProcessFromTg, tg]);
+
+
+  useEffect(() => {
+      const handleHashChange = () => {
+        const urlParams = new URLSearchParams(window.location.hash.slice(1));
+        const newParam = urlParams.get('tgWebAppStartParam');
+        if (newParam) {
+            downloadAndProcessFromTg(newParam);
         }
     };
-
-    if (startParam) {
-      downloadAndProcess(startParam);
-    }
     
-  }, [startParam, processFile, toast]);
+    window.addEventListener('hashchange', handleHashChange);
+    
+    return () => {
+        window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, [downloadAndProcessFromTg]);
+
 
   const handlePlayPause = () => {
     if (currentSong) {
@@ -222,11 +248,16 @@ export default function TunePocketApp() {
     if (tg?.colorScheme) {
       applyTheme(tg.colorScheme);
     }
-    tg?.onEvent('themeChanged', () => {
+    const themeChangedHandler = () => {
       if (tg.colorScheme) {
         applyTheme(tg.colorScheme);
       }
-    });
+    };
+    tg?.onEvent('themeChanged', themeChangedHandler);
+    
+    return () => {
+        tg?.offEvent('themeChanged', themeChangedHandler);
+    }
   }, [tg]);
 
   if (isLoading && !songs.length) {
