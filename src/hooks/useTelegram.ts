@@ -10,40 +10,57 @@ export const useTelegram = () => {
   const [tg, setTg] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [startParam, setStartParam] = useState<string | null>(null);
-  const [theme, setTheme] = useState('dark');
   
   useEffect(() => {
     let param: string | null = null;
     
-    // First, try to get the start_param from the hash, which is what Telegram uses
-    // for deep links when the app is already open.
-    const hash = window.location.hash;
-    const urlParams = new URLSearchParams(hash.slice(1));
-    param = urlParams.get('tgWebAppStartParam');
+    // Function to extract param from hash
+    const getParamFromHash = () => {
+        const hash = window.location.hash;
+        const urlParams = new URLSearchParams(hash.slice(1));
+        return urlParams.get('tgWebAppStartParam');
+    }
 
-    if (window.Telegram) {
-      const telegramApp = window.Telegram.WebApp;
-      telegramApp.ready();
-      
-      setTg(telegramApp);
-      setUser(telegramApp.initDataUnsafe?.user);
-      
-      if (telegramApp.colorScheme) {
-        setTheme(telegramApp.colorScheme);
-      }
-      
-      // If the hash param wasn't found, check the initData a`start_param`,
-      // which is used when the app is first launched.
-      if (!param) {
-        param = telegramApp.initDataUnsafe?.start_param;
-      }
+    // Main initialization logic
+    const init = () => {
+        if (window.Telegram) {
+          const telegramApp = window.Telegram.WebApp;
+          telegramApp.ready();
+          
+          setTg(telegramApp);
+          setUser(telegramApp.initDataUnsafe?.user);
+          
+          // First, try to get the start_param from the hash
+          param = getParamFromHash();
+
+          // If the hash param wasn't found, check the initData's start_param
+          if (!param) {
+            param = telegramApp.initDataUnsafe?.start_param;
+          }
+        }
+        
+        if (param) {
+          setStartParam(param);
+        }
     }
     
-    if (param) {
-      setStartParam(param);
-    }
+    init();
+
+    // Listen for hash changes to catch deep links when the app is already open
+    const handleHashChange = () => {
+        const newParam = getParamFromHash();
+        if (newParam) {
+            setStartParam(newParam);
+        }
+    };
     
+    window.addEventListener('hashchange', handleHashChange);
+    
+    return () => {
+        window.removeEventListener('hashchange', handleHashChange);
+    };
+
   }, []);
 
-  return { tg, user, startParam, theme };
+  return { tg, user, startParam };
 };
