@@ -40,6 +40,7 @@ export default function TunePocketApp() {
 
   const loadSongs = useCallback(async () => {
     try {
+      await initDB();
       const storedSongs = await getSongs();
       setSongs(storedSongs);
     } catch (error) {
