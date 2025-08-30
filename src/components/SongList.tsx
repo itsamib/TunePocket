@@ -1,11 +1,8 @@
 'use client';
 
 import { Song, SongGroup } from '@/types';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Music, User, Library, PlayCircle, BarChartHorizontal } from 'lucide-react';
-import Image from 'next/image';
-import { ScrollArea } from './ui/scroll-area';
 
 interface SongListProps {
   groupedSongs: SongGroup;
@@ -26,26 +23,20 @@ export function SongList({ groupedSongs, onSelectSong, currentSong }: SongListPr
   return (
     <div>
         <h2 className="text-2xl font-headline font-bold mb-4 flex items-center gap-2"><Library /> My Library</h2>
-        <Accordion type="multiple" className="w-full">
-          {Object.keys(groupedSongs).sort().map(genre => (
-            <AccordionItem value={genre} key={genre}>
-              <AccordionTrigger className="font-headline text-lg">
-                  <div className="flex items-center gap-2">
-                      <Music className="text-primary"/> {genre}
-                  </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <Accordion type="multiple" className="w-full pl-4">
-                  {Object.keys(groupedSongs[genre]).sort().map(artist => (
-                    <AccordionItem value={`${genre}-${artist}`} key={`${genre}-${artist}`}>
-                      <AccordionTrigger>
-                          <div className="flex items-center gap-2">
-                              <User className="text-accent" /> {artist}
-                          </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <ul className="space-y-1 pt-2">
-                          {groupedSongs[genre][artist].map(song => (
+        <div className="space-y-4">
+          {Object.keys(groupedSongs).sort().map(category => (
+            <div key={category} className="space-y-2">
+              <h3 className="font-headline text-lg flex items-center gap-2 text-primary">
+                  <Music className="w-5 h-5"/> {category}
+              </h3>
+              <div className="pl-4 space-y-2">
+                {Object.keys(groupedSongs[category]).sort().map(artist => (
+                    <div key={`${category}-${artist}`}>
+                        <h4 className="font-semibold flex items-center gap-2 text-accent">
+                            <User className="w-4 h-4" /> {artist}
+                        </h4>
+                        <ul className="space-y-1 pt-2 pl-4">
+                          {groupedSongs[category][artist].map(song => (
                             <li key={song.id}>
                               <Button
                                 variant={currentSong?.id === song.id ? "secondary" : "ghost"}
@@ -62,14 +53,12 @@ export function SongList({ groupedSongs, onSelectSong, currentSong }: SongListPr
                             </li>
                           ))}
                         </ul>
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              </AccordionContent>
-            </AccordionItem>
+                    </div>
+                ))}
+              </div>
+            </div>
           ))}
-        </Accordion>
+        </div>
       </div>
   );
 }
