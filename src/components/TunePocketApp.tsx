@@ -14,7 +14,7 @@ import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 
 export default function TunePocketApp() {
-  const { tg, user, startParam } = useTelegram();
+  const { tg, user, startParam, theme } = useTelegram();
   const [songs, setSongs] = useState<Song[]>([]);
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -52,7 +52,10 @@ export default function TunePocketApp() {
     setProcessingMessage('Reading metadata...');
     
     try {
-      const mmb = window.musicMetadataBrowser;
+        const mmb = window.musicMetadataBrowser;
+        if (!mmb) {
+            throw new Error('Metadata library not loaded yet.');
+        }
       const metadata = await mmb.parseBlob(file);
       
       const title = metadata.common.title || fileName || 'Unknown Title';
@@ -81,7 +84,7 @@ export default function TunePocketApp() {
       toast({ title: "Song Added!", description: `${title} by ${artist} has been added to your library.` });
     } catch (error) {
       console.error('Failed to process file', error);
-      toast({ title: "Processing Failed", description: "Could not process the audio file.", variant: "destructive" });
+      toast({ title: "Processing Failed", description: "Could not process the audio file. Please try again.", variant: "destructive" });
     } finally {
       setIsLoading(false);
       setProcessingMessage('');
@@ -89,16 +92,30 @@ export default function TunePocketApp() {
   }, [loadSongs, toast]);
   
   useEffect(() => {
-    if (startParam) {
-      const downloadAndProcess = async () => {
+    // We need to handle hash changes to get start_param when the app is already open
+    const handleHashChange = () => {
+        const getStartParamFromHash = () => {
+            if (typeof window === 'undefined') return null;
+            const hash = window.location.hash;
+            const urlParams = new URLSearchParams(hash.slice(1)); // remove '#' and parse
+            return urlParams.get('tgWebAppStartParam');
+        };
+        const newStartParam = getStartParamFromHash();
+        if (newStartParam) {
+            downloadAndProcess(newStartParam);
+        }
+    }
+
+    window.addEventListener('hashchange', handleHashChange);
+
+    const downloadAndProcess = async (param: string) => {
         setIsLoading(true);
         setProcessingMessage('Downloading from Telegram...');
         try {
-          // The start_param is a full URL to the file
-          const response = await fetch(startParam);
+          const response = await fetch(param);
           if (!response.ok) throw new Error('Failed to download file from Telegram');
           const blob = await response.blob();
-          const fileName = startParam.split('/').pop()?.split('?')[0] || 'telegram-song.mp3';
+          const fileName = param.split('/').pop()?.split('?')[0] || 'telegram-song.mp3';
           await processFile(blob, fileName);
         } catch (error) {
           console.error("Error fetching from Telegram URL:", error);
@@ -107,8 +124,14 @@ export default function TunePocketApp() {
             setIsLoading(false);
             setProcessingMessage('');
         }
-      };
-      downloadAndProcess();
+    };
+      
+    if (startParam) {
+      downloadAndProcess(startParam);
+    }
+    
+    return () => {
+        window.removeEventListener('hashchange', handleHashChange);
     }
   }, [startParam, processFile, toast]);
 
@@ -152,6 +175,10 @@ export default function TunePocketApp() {
       return acc;
     }, {});
   }, [songs]);
+  
+  useEffect(() => {
+    document.documentElement.className = theme;
+  }, [theme])
 
   if (isLoading && !songs.length) {
     return (
