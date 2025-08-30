@@ -15,6 +15,10 @@ import { Badge } from './ui/badge';
 
 const getMmb = (): Promise<typeof window.musicMetadataBrowser> => {
   return new Promise((resolve, reject) => {
+    if (window.musicMetadataBrowser) {
+      return resolve(window.musicMetadataBrowser);
+    }
+
     const interval = setInterval(() => {
       if (window.musicMetadataBrowser) {
         clearInterval(interval);
@@ -24,8 +28,10 @@ const getMmb = (): Promise<typeof window.musicMetadataBrowser> => {
 
     setTimeout(() => {
       clearInterval(interval);
-      reject(new Error("Metadata library failed to load in time."));
-    }, 5000); // 5 second timeout
+      if (!window.musicMetadataBrowser) {
+        reject(new Error("Metadata library failed to load in time."));
+      }
+    }, 10000); // 10 second timeout
   });
 };
 
