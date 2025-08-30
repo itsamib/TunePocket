@@ -11,7 +11,20 @@ This guide explains how to create a Telegram bot, enable its Web App (Mini App) 
     *   Choose a username for your bot, which must end in `bot` (e.g., `MyTunePocket_bot`).
 4.  `BotFather` will provide you with an **HTTP API token**. **Save this token securely.** You'll need it for the Python script and your backend environment variables.
 
-## 2. Set up the Mini App (Web App)
+## 2. Set the Bot Token in Your Environment
+
+For the backend to communicate with Telegram (to fetch files and send messages), it needs the bot token. You must set this token as an environment variable.
+
+1.  In the root of your project, create a file named `.env`.
+2.  Add the following line to the `.env` file, replacing `YOUR_HTTP_API_TOKEN` with the actual token you received from BotFather:
+
+    ```
+    TELEGRAM_BOT_TOKEN="YOUR_HTTP_API_TOKEN"
+    ```
+
+**IMPORTANT:** Never share your bot token or commit the `.env` file to a public repository.
+
+## 3. Set up the Mini App (Web App)
 
 1.  Send the `/mybots` command to `BotFather` and select your newly created bot.
 2.  Go to **Bot Settings** -> **Menu Button**.
@@ -20,7 +33,7 @@ This guide explains how to create a Telegram bot, enable its Web App (Mini App) 
 5.  Set the **text for the menu button** (e.g., "Open TunePocket").
 6.  A confirmation message will appear. Now, your bot has a menu button that launches your web app.
 
-## 3. Python Bot Script
+## 4. Python Bot Script
 
 This script uses the `python-telegram-bot` library to handle incoming audio files.
 
@@ -116,17 +129,17 @@ if __name__ == "__main__":
 ### How to Run the Bot
 
 1.  Replace `YOUR_HTTP_API_TOKEN` and `https://your-pwa-url.com` in the `bot.py` script.
-2.  Set the `TELEGRAM_BOT_TOKEN` environment variable for your backend service using the same token.
+2.  Make sure you have set the `TELEGRAM_BOT_TOKEN` in your `.env` file for your backend service.
 3.  Run the script from your terminal: `python bot.py`.
 4.  Go to Telegram, find your bot, and send it an MP3 file. It should reply with a button that opens your PWA and passes the necessary parameters. The app will then handle fetching the file and sending a confirmation message back via the bot.
 
-## 4. How the App Fetches and Confirms
+## 5. How the App Fetches and Confirms
 
 The Python bot now sends a `start_param` that combines the `file_id` and the `chat_id`. The front-end application receives this parameter, splits it, and uses the `file_id` to fetch the file via a Genkit flow (`getTelegramFile`).
 
 After successfully processing and saving the song, the app calls another Genkit flow (`sendTelegramMessage`), passing the `chat_id` and a confirmation message. This new flow uses the bot token on the server to send a message back to the user in Telegram, confirming that the song has been added.
 
-## 5. Testing and Deployment
+## 6. Testing and Deployment
 
 *   **Local Testing**:
     1.  Run your Next.js app locally (`npm run dev`).
@@ -138,4 +151,3 @@ After successfully processing and saving the song, the app calls another Genkit 
     2.  Update the `MINI_APP_URL` in your bot script and `BotFather` settings to the final production URL.
     3.  Deploy your Python bot to a server (e.g., Heroku, a VPS, or a serverless function) so it runs continuously.
     4.  Ensure the `TELEGRAM_BOT_TOKEN` environment variable is set in your deployed backend environment.
-
