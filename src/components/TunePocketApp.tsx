@@ -72,7 +72,6 @@ export default function TunePocketApp() {
     
     const finalSong = { ...newSongData, id: newId };
     
-    // Use a functional update to ensure we're working with the latest state
     setSongs(prevSongs => [...prevSongs, finalSong]);
 
     return finalSong;
@@ -137,7 +136,6 @@ export default function TunePocketApp() {
     } finally {
         setIsLoading(false);
         setProcessingMessage('');
-        // Clean the hash to prevent re-processing on refresh
         if (window.history.replaceState) {
             const url = new URL(window.location.href);
             url.hash = '';
@@ -146,7 +144,6 @@ export default function TunePocketApp() {
     }
   }, [processAndSaveSong, toast]);
 
-  // Effect for initializing the app and handling Telegram start param
   useEffect(() => {
     const initializeApp = async () => {
       setIsLoading(true);
@@ -160,39 +157,40 @@ export default function TunePocketApp() {
       } catch (error) {
         console.error('DB initialization or song loading failed', error);
         toast({ title: "Initialization Error", description: "Could not load the song library.", variant: "destructive" });
+        setIsLoading(false);
+        setProcessingMessage('');
+        return; 
       }
 
-      // Initialize Telegram Web App
-      if (window.Telegram) {
+      let startParam: string | null = null;
+      if (window.Telegram && window.Telegram.WebApp) {
           const telegramApp = window.Telegram.WebApp;
           telegramApp.ready();
           setTg(telegramApp);
           setUser(telegramApp.initDataUnsafe?.user);
-
-          // Check for start_param only after TG is initialized
-          const startParam = telegramApp.initDataUnsafe?.start_param;
-          if (startParam) {
-              await handleTelegramFile(startParam);
-          }
-      } else {
-        // Handle case where Telegram script might not be loaded
+          startParam = telegramApp.initDataUnsafe?.start_param;
+      }
+      
+      if (!startParam) {
          const urlParams = new URLSearchParams(window.location.hash.slice(1));
-         const startParam = urlParams.get('tgWebAppStartParam');
-          if (startParam) {
-              await handleTelegramFile(startParam);
-          }
+         startParam = urlParams.get('tgWebAppStartParam');
       }
 
-      setIsLoading(false);
-      setProcessingMessage('');
+      if (startParam) {
+          await handleTelegramFile(startParam);
+      } else {
+          setIsLoading(false);
+          setProcessingMessage('');
+      }
     };
     
     initializeApp();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on component mount
+  }, []);
 
   const handleManualUpload = useCallback(async (file: File) => {
     setIsLoading(true);
+    setProcessingMessage('Processing file...');
     try {
         const savedSong = await processAndSaveSong(file, file.name);
         toast({ title: "Song Added!", description: `\'\'\'${savedSong.title}\'\'\' has been added.` });
@@ -246,7 +244,6 @@ export default function TunePocketApp() {
     }, {});
   }, [songs]);
   
-  // Effect for handling Telegram theme changes
   useEffect(() => {
     if (!tg) return;
 
@@ -268,7 +265,7 @@ export default function TunePocketApp() {
     }
   }, [tg]);
 
-  if (isLoading && !songs.length) {
+  if (isLoading && !songs.length && processingMessage) {
     return (
         <div className="flex flex-col items-center justify-center h-screen bg-background text-foreground">
             <h1 className="text-5xl font-headline text-primary mb-4">TunePocket</h1>
@@ -288,7 +285,7 @@ export default function TunePocketApp() {
             <div className="p-4 space-y-4">
                 <SongList groupedSongs={groupedSongs} onSelectSong={handleSelectSong} currentSong={currentSong} />
                 <Separator />
-                <FileUpload onFileSelect={handleManualUpload} isLoading={isLoading} />
+                <FileUpload onFileSelect={handleManualUpload} isLoading={isLoading && !!processingMessage} />
             </div>
         </ScrollArea>
        </main>
