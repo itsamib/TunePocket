@@ -17,14 +17,16 @@ import { Badge } from './ui/badge';
 
 const getMmb = (): Promise<typeof window.musicMetadataBrowser> => {
   return new Promise((resolve, reject) => {
-    const check = () => {
-      if (window.musicMetadataBrowser) {
-        resolve(window.musicMetadataBrowser);
-      } else {
-        setTimeout(check, 100);
-      }
-    };
-    check();
+    if (typeof window.musicMetadataBrowser !== 'undefined') {
+      return resolve(window.musicMetadataBrowser);
+    }
+    const script = document.querySelector('script[src*="music-metadata-browser"]');
+    if (script) {
+        script.addEventListener('load', () => resolve(window.musicMetadataBrowser));
+        script.addEventListener('error', () => reject(new Error("Metadata library failed to load.")));
+    } else {
+        reject(new Error("Metadata script not found."));
+    }
   });
 };
 
@@ -51,9 +53,11 @@ export default function TunePocketApp() {
   useEffect(() => {
     const initialize = async () => {
       setIsLoading(true);
+      setProcessingMessage('Initializing...');
       await initDB();
       await loadSongs();
       setIsLoading(false);
+      setProcessingMessage('');
     };
     initialize();
   }, [loadSongs]);
@@ -144,6 +148,15 @@ export default function TunePocketApp() {
           }
           
           await processFile(blob, fileName, chatId);
+          
+          // Clear startParam from URL only on success
+          if (window.history.pushState) {
+            const url = new URL(window.location.href);
+            const params = new URLSearchParams(url.hash.slice(1));
+            params.delete('tgWebAppStartParam');
+            url.hash = params.toString();
+            window.history.pushState({}, document.title, url.toString());
+          }
 
         } catch (error) {
           console.error("Error fetching from Telegram via flow:", error);
@@ -156,14 +169,6 @@ export default function TunePocketApp() {
 
     if (startParam) {
       downloadAndProcess(startParam);
-      // Clear startParam after processing to avoid re-triggering
-      if (window.history.pushState) {
-        const url = new URL(window.location.href);
-        const params = new URLSearchParams(url.hash.slice(1));
-        params.delete('tgWebAppStartParam');
-        url.hash = params.toString();
-        window.history.pushState({}, document.title, url.toString());
-      }
     }
     
   }, [startParam, processFile, toast]);
@@ -210,10 +215,19 @@ export default function TunePocketApp() {
   }, [songs]);
   
   useEffect(() => {
-    if (tg?.colorScheme) {
-      document.documentElement.className = tg.colorScheme;
+    const applyTheme = (theme: 'dark' | 'light') => {
+      document.documentElement.classList.remove('dark', 'light');
+      document.documentElement.classList.add(theme);
     }
-  }, [tg?.colorScheme])
+    if (tg?.colorScheme) {
+      applyTheme(tg.colorScheme);
+    }
+    tg?.onEvent('themeChanged', () => {
+      if (tg.colorScheme) {
+        applyTheme(tg.colorScheme);
+      }
+    });
+  }, [tg]);
 
   if (isLoading && !songs.length) {
     return (
