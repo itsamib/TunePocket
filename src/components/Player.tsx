@@ -154,7 +154,7 @@ export default function Player({ currentSong, isPlaying, onPlayPause, onNext, on
                 <Badge variant="secondary" className="flex items-center gap-1.5">
                     <Wifi className="text-green-500 w-4 h-4" />
                     <span className="truncate">
-                        {telegramUser.username ? `@${telegramUser.username}` : `${telegramUser.first_name}`}
+                        {telegramUser.username ? `@${telegramUser.username}` : telegramUser.first_name}
                     </span>
                 </Badge>
             ): (
