@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTelegram } from '@/hooks/useTelegram';
 import { addSong, getSongs, initDB } from '@/lib/db';
 import { categorizeSongsByGenre } from '@/ai/flows/categorize-songs-by-genre';
+import { getTelegramFile } from '@/ai/flows/get-telegram-file';
 import type { Song, SongGroup } from '@/types';
 import Player from './Player';
 import { SongList } from './SongList';
@@ -112,47 +113,44 @@ export default function TunePocketApp() {
   }, [loadSongs, toast]);
   
   useEffect(() => {
-    // We need to handle hash changes to get start_param when the app is already open
-    const handleHashChange = () => {
-        const getStartParamFromHash = () => {
-            if (typeof window === 'undefined') return null;
-            const hash = window.location.hash;
-            const urlParams = new URLSearchParams(hash.slice(1)); // remove '#' and parse
-            return urlParams.get('tgWebAppStartParam');
-        };
-        const newStartParam = getStartParamFromHash();
-        if (newStartParam) {
-            downloadAndProcess(newStartParam);
-        }
-    }
-
-    window.addEventListener('hashchange', handleHashChange);
-
-    const downloadAndProcess = async (param: string) => {
+    const downloadAndProcess = async (fileId: string) => {
         setIsLoading(true);
         setProcessingMessage('Downloading from Telegram...');
         try {
-          const response = await fetch(param);
+          const response = await getTelegramFile({ fileId });
           if (!response.ok) throw new Error('Failed to download file from Telegram');
+          
           const blob = await response.blob();
-          const fileName = param.split('/').pop()?.split('?')[0] || 'telegram-song.mp3';
+          
+          let fileName = 'telegram-song.mp3';
+          const contentDisposition = response.headers.get('content-disposition');
+          if (contentDisposition) {
+            const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+            if (filenameMatch && filenameMatch[1]) {
+                fileName = filenameMatch[1];
+            }
+          }
+          
           await processFile(blob, fileName);
+
         } catch (error) {
-          console.error("Error fetching from Telegram URL:", error);
+          console.error("Error fetching from Telegram via flow:", error);
           toast({ title: "Download Failed", description: "Could not download the song from Telegram.", variant: "destructive" });
         } finally {
             setIsLoading(false);
             setProcessingMessage('');
         }
     };
-      
+
     if (startParam) {
       downloadAndProcess(startParam);
+      // Clear startParam after processing to avoid re-triggering
+      if (window.history.pushState) {
+        const cleanUrl = window.location.pathname + window.location.search;
+        window.history.pushState({}, document.title, cleanUrl);
+      }
     }
     
-    return () => {
-        window.removeEventListener('hashchange', handleHashChange);
-    }
   }, [startParam, processFile, toast]);
 
   const handlePlayPause = () => {

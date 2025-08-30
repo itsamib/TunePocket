@@ -2,15 +2,10 @@
 
 import { useState, useEffect } from 'react';
 
-// A function to get the start_param from the URL hash
-const getStartParamFromHash = () => {
-  if (typeof window === 'undefined') return null;
-  const hash = window.location.hash;
-  const urlParams = new URLSearchParams(hash.slice(1)); // remove '#' and parse
-  return urlParams.get('tgWebAppStartParam');
-};
-
-
+// This hook is now simplified. It only cares about the initial start_param.
+// Re-triggering based on hash changes is removed because it was unreliable
+// and the new flow in TunePocketApp handles clearing the start_param from the URL
+// to prevent re-processing.
 export const useTelegram = () => {
   const [tg, setTg] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
@@ -18,44 +13,37 @@ export const useTelegram = () => {
   const [theme, setTheme] = useState('dark');
   
   useEffect(() => {
-    const handleHashChange = () => {
-      const newStartParam = getStartParamFromHash();
-      if (newStartParam) {
-        setStartParam(newStartParam);
-      }
-    };
+    let param: string | null = null;
     
-    // Set initial startParam from hash
-    setStartParam(getStartParamFromHash());
-    
-    window.addEventListener('hashchange', handleHashChange, false);
-    
+    // First, try to get the start_param from the hash, which is what Telegram uses
+    // for deep links when the app is already open.
+    const hash = window.location.hash;
+    const urlParams = new URLSearchParams(hash.slice(1));
+    param = urlParams.get('tgWebAppStartParam');
+
     if (window.Telegram) {
       const telegramApp = window.Telegram.WebApp;
       telegramApp.ready();
+      
       setTg(telegramApp);
       setUser(telegramApp.initDataUnsafe?.user);
-
+      
       if (telegramApp.colorScheme) {
         setTheme(telegramApp.colorScheme);
       }
       
-      const param = telegramApp.initDataUnsafe?.start_param;
-      if (param) {
-        setStartParam(param);
+      // If the hash param wasn't found, check the initData a`start_param`,
+      // which is used when the app is first launched.
+      if (!param) {
+        param = telegramApp.initDataUnsafe?.start_param;
       }
     }
-
-    return () => {
-        window.removeEventListener('hashchange', handleHashChange, false);
+    
+    if (param) {
+      setStartParam(param);
     }
-
+    
   }, []);
 
-
-  useEffect(() => {
-    document.documentElement.className = theme;
-  }, [theme])
-
-  return { tg, user, startParam };
+  return { tg, user, startParam, theme };
 };
