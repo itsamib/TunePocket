@@ -13,9 +13,10 @@ const getStartParamFromHash = () => {
 
 export const useTelegram = () => {
   const [tg, setTg] = useState<any>(null);
-  const [startParam, setStartParam] = useState<string | null>(getStartParamFromHash());
+  const [user, setUser] = useState<any>(null);
+  const [startParam, setStartParam] = useState<string | null>(null);
   const [theme, setTheme] = useState('dark');
-
+  
   useEffect(() => {
     const handleHashChange = () => {
       const newStartParam = getStartParamFromHash();
@@ -24,12 +25,16 @@ export const useTelegram = () => {
       }
     };
     
+    // Set initial startParam from hash
+    setStartParam(getStartParamFromHash());
+    
     window.addEventListener('hashchange', handleHashChange, false);
     
     if (window.Telegram) {
       const telegramApp = window.Telegram.WebApp;
       telegramApp.ready();
       setTg(telegramApp);
+      setUser(telegramApp.initDataUnsafe?.user);
 
       if (telegramApp.colorScheme) {
         setTheme(telegramApp.colorScheme);
@@ -37,10 +42,7 @@ export const useTelegram = () => {
       
       const param = telegramApp.initDataUnsafe?.start_param;
       if (param) {
-          // Check if it's different from the one from hash to avoid unnecessary re-renders
-          if (param !== startParam) {
-            setStartParam(param);
-          }
+        setStartParam(param);
       }
     }
 
@@ -48,12 +50,12 @@ export const useTelegram = () => {
         window.removeEventListener('hashchange', handleHashChange, false);
     }
 
-  }, [startParam]);
+  }, []);
 
 
   useEffect(() => {
     document.documentElement.className = theme;
   }, [theme])
 
-  return { tg, startParam };
+  return { tg, user, startParam };
 };

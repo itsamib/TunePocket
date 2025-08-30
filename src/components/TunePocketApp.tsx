@@ -9,11 +9,12 @@ import Player from './Player';
 import { SongList } from './SongList';
 import { FileUpload } from './FileUpload';
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Music } from 'lucide-react';
+import { Loader2, Music, Wifi, WifiOff } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
+import { Badge } from './ui/badge';
 
 export default function TunePocketApp() {
-  const { tg, startParam } = useTelegram();
+  const { tg, user, startParam } = useTelegram();
   const [songs, setSongs] = useState<Song[]>([]);
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -164,8 +165,21 @@ export default function TunePocketApp() {
 
   return (
     <div className="flex h-full w-full bg-background text-foreground">
-      <aside className="w-1/3 h-full border-r border-border overflow-hidden">
+      <aside className="w-1/3 h-full border-r border-border overflow-hidden relative">
         <SongList groupedSongs={groupedSongs} onSelectSong={handleSelectSong} currentSong={currentSong} />
+        <div className="absolute bottom-0 left-0 right-0 p-2 border-t bg-background/80 backdrop-blur-sm">
+            {user ? (
+                <Badge variant="secondary" className="flex items-center gap-2">
+                    <Wifi className="text-green-500" />
+                    Connected as {user.username || `${user.first_name} ${user.last_name || ''}`}
+                </Badge>
+            ): (
+                <Badge variant="destructive" className="flex items-center gap-2">
+                    <WifiOff />
+                    Not connected to Telegram
+                </Badge>
+            )}
+        </div>
       </aside>
       <main className="w-2/3 h-full overflow-y-auto">
         {currentSong?.artwork ? (
