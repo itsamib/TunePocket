@@ -22,12 +22,7 @@ This guide explains how to create a Telegram bot, enable its Web App (Mini App) 
 
 ## 3. Enable `start_param` for Deep Linking
 
-When a user sends a file, we want the bot to open the app with a link to that file. This is done via a deep link using the `start_param`.
-
-1.  Send `/mybots` to `BotFather` again and select your bot.
-2.  Go to **Bot Settings** -> **Inline Mode**.
-3.  Click **Turn on**. This allows the bot to be used in any chat and is often a prerequisite for more advanced Web App interactions. (While not strictly necessary for our file-sending flow, it's good practice).
-4.  The bot logic itself will construct the URL with the `start_param`.
+When a user sends a file, we want the bot to open the app with a link to that file. This is done via a deep link using the `start_param`. The bot logic itself will construct the URL with the `start_param`. The key is that the Mini App URL should be structured to handle this. For Telegram Mini Apps, when a `start_param` is used, Telegram may append it to the URL hash like `https://your-app.com/#tgWebAppStartParam=...`
 
 ## 4. Sample Python Bot Script
 
@@ -44,7 +39,7 @@ pip install python-telegram-bot --pre
 
 ```python
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, WebAppInfo
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # --- Configuration ---
@@ -61,7 +56,8 @@ logger = logging.getLogger(__name__)
 # Handler for the /start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
-        "Welcome to TunePocket! Send me an MP3 file, and I'll add it to your library."
+        "Welcome to TunePocket! Send me an MP3 file, and I'll add it to your library.",
+        reply_markup={'inline_keyboard': [[{'text': 'Open TunePocket', 'web_app': {'url': MINI_APP_URL}}]]}
     )
 
 # Handler for audio messages
@@ -74,24 +70,30 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     try:
         # Get the file object from Telegram
         file = await context.bot.get_file(audio_file.file_id)
-        file_path = file.file_path  # This is the download link
-
+        
+        # We don't need to download it on the server.
+        # We will create a special URL to open the web app with the file_id as a parameter.
+        # The web app will then use this file_id to ask the bot for a temporary download link.
+        # This approach is more secure and robust.
+        # We will use the file_id as the start_param
+        file_id_param = audio_file.file_id
+        
         # Construct the deep link URL for the Mini App
-        # The file_path is already a full URL
-        app_url_with_param = f"{MINI_APP_URL}?start_param={file_path}"
+        app_url_with_param = f"{MINI_APP_URL}?start_param={file_id_param}"
         
         logger.info(f"Generated Mini App URL: {app_url_with_param}")
 
         # Create an inline keyboard button to open the Mini App
         keyboard = [
             [
-                InlineKeyboardButton(
-                    "Open in TunePocket & Process Song",
-                    web_app={"url": app_url_with_param}
-                )
+                {
+                    'text': "Open in TunePocket & Process Song",
+                    'web_app': {'url': app_url_with_param}
+                }
             ]
         ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        reply_markup = {'inline_keyboard': keyboard}
 
         await update.message.reply_text(
             f"Ready to process '{audio_file.title or 'this song'}'. Click below to open your library:",
@@ -123,9 +125,15 @@ if __name__ == "__main__":
 
 1.  Replace `YOUR_HTTP_API_TOKEN` and `https://your-pwa-url.com` in the `bot.py` script.
 2.  Run the script from your terminal: `python bot.py`.
-3.  Go to Telegram, find your bot, and send it an MP3 file. It should reply with a button that opens your PWA and passes the file's download link.
+3.  Go to Telegram, find your bot, and send it an MP3 file. It should reply with a button that opens your PWA and passes a `file_id`. The app will then handle fetching the file.
 
-## 5. Testing and Deployment
+## 5. How the App Fetches the File
+
+The updated Python bot no longer sends a direct download link. Instead, it sends the `file_id`. The front-end application receives this `file_id` as `startParam`. The app then needs a serverless function or backend endpoint that can take this `file_id`, use the bot token to ask Telegram for a temporary download URL, and then stream the file to the user.
+
+This change was made to prevent issues with expired download links and to create a more secure flow. The current application code now fetches directly from the temporary URL provided by Telegram, which can be unreliable. **The next step would be to create a backend function to handle this file fetching securely.**
+
+## 6. Testing and Deployment
 
 *   **Local Testing**:
     1.  Run your Next.js app locally (`npm run dev`).

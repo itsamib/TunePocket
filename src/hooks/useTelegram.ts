@@ -2,32 +2,58 @@
 
 import { useState, useEffect } from 'react';
 
+// A function to get the start_param from the URL hash
+const getStartParamFromHash = () => {
+  if (typeof window === 'undefined') return null;
+  const hash = window.location.hash;
+  const urlParams = new URLSearchParams(hash.slice(1)); // remove '#' and parse
+  return urlParams.get('tgWebAppStartParam');
+};
+
+
 export const useTelegram = () => {
   const [tg, setTg] = useState<any>(null);
-  const [startParam, setStartParam] = useState<string | null>(null);
+  const [startParam, setStartParam] = useState<string | null>(getStartParamFromHash());
+  const [theme, setTheme] = useState('dark');
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.Telegram) {
+    const handleHashChange = () => {
+      const newStartParam = getStartParamFromHash();
+      if (newStartParam) {
+        setStartParam(newStartParam);
+      }
+    };
+    
+    window.addEventListener('hashchange', handleHashChange, false);
+    
+    if (window.Telegram) {
       const telegramApp = window.Telegram.WebApp;
       telegramApp.ready();
       setTg(telegramApp);
+
+      if (telegramApp.colorScheme) {
+        setTheme(telegramApp.colorScheme);
+      }
       
       const param = telegramApp.initDataUnsafe?.start_param;
       if (param) {
-        setStartParam(param);
+          // Check if it's different from the one from hash to avoid unnecessary re-renders
+          if (param !== startParam) {
+            setStartParam(param);
+          }
       }
     }
-  }, []);
-  
-  // This effect runs only on the client, after the initial render.
-  useEffect(() => {
-    if (tg) {
-        document.documentElement.className = tg.colorScheme;
-    } else {
-        // Default to dark theme if not in telegram
-        document.documentElement.className = 'dark';
+
+    return () => {
+        window.removeEventListener('hashchange', handleHashChange, false);
     }
-  }, [tg])
+
+  }, [startParam]);
+
+
+  useEffect(() => {
+    document.documentElement.className = theme;
+  }, [theme])
 
   return { tg, startParam };
 };
