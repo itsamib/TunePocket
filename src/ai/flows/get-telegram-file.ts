@@ -46,9 +46,15 @@ const getTelegramFileFlow = ai.defineFlow(
         throw new Error(`Network error when calling Telegram getFile API: ${e.message}`);
     }
     
+    if (!fileInfoResponse.ok) {
+        const errorBody = await fileInfoResponse.text();
+        console.error("Telegram getFile API error response:", errorBody);
+        throw new Error(`Failed to get file info from Telegram, status: ${fileInfoResponse.status}`);
+    }
+    
     const fileInfo = await fileInfoResponse.json();
 
-    if (!fileInfoResponse.ok || !fileInfo.ok) {
+    if (!fileInfo.ok) {
         console.error("Telegram getFile API error:", fileInfo);
         throw new Error(`Failed to get file info from Telegram: ${fileInfo.description || 'Unknown error'}`);
     }
