@@ -13,6 +13,23 @@ import { Loader2, Music, Wifi, WifiOff } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 
+const getMmb = (): Promise<typeof window.musicMetadataBrowser> => {
+  return new Promise((resolve, reject) => {
+    const interval = setInterval(() => {
+      if (window.musicMetadataBrowser) {
+        clearInterval(interval);
+        resolve(window.musicMetadataBrowser);
+      }
+    }, 100);
+
+    setTimeout(() => {
+      clearInterval(interval);
+      reject(new Error("Metadata library failed to load in time."));
+    }, 5000); // 5 second timeout
+  });
+};
+
+
 export default function TunePocketApp() {
   const { tg, user, startParam, theme } = useTelegram();
   const [songs, setSongs] = useState<Song[]>([]);
@@ -52,10 +69,7 @@ export default function TunePocketApp() {
     setProcessingMessage('Reading metadata...');
     
     try {
-        const mmb = window.musicMetadataBrowser;
-        if (!mmb) {
-            throw new Error('Metadata library not loaded yet.');
-        }
+      const mmb = await getMmb();
       const metadata = await mmb.parseBlob(file);
       
       const title = metadata.common.title || fileName || 'Unknown Title';
@@ -82,9 +96,9 @@ export default function TunePocketApp() {
       await loadSongs();
       
       toast({ title: "Song Added!", description: `${title} by ${artist} has been added to your library.` });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to process file', error);
-      toast({ title: "Processing Failed", description: "Could not process the audio file. Please try again.", variant: "destructive" });
+      toast({ title: "Processing Failed", description: error.message || "Could not process the audio file. Please try again.", variant: "destructive" });
     } finally {
       setIsLoading(false);
       setProcessingMessage('');
@@ -177,7 +191,9 @@ export default function TunePocketApp() {
   }, [songs]);
   
   useEffect(() => {
-    document.documentElement.className = theme;
+    if (theme) {
+      document.documentElement.className = theme;
+    }
   }, [theme])
 
   if (isLoading && !songs.length) {
