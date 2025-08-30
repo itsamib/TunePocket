@@ -11,9 +11,7 @@ import Player from './Player';
 import { SongList } from './SongList';
 import { FileUpload } from './FileUpload';
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Music, Wifi, WifiOff } from 'lucide-react';
-import { Card, CardContent } from './ui/card';
-import { Badge } from './ui/badge';
+import { Loader2 } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
 
@@ -23,8 +21,12 @@ const getMmb = (): Promise<typeof window.musicMetadataBrowser> => {
       return resolve(window.musicMetadataBrowser);
     }
     const script = document.querySelector('script[src*="music-metadata-browser"]');
-    script?.addEventListener('load', () => resolve(window.musicMetadataBrowser));
-    script?.addEventListener('error', () => reject(new Error("Metadata library failed to load.")));
+    if (script) {
+        script.addEventListener('load', () => resolve(window.musicMetadataBrowser));
+        script.addEventListener('error', () => reject(new Error("Metadata library failed to load.")));
+    } else {
+        reject(new Error("Metadata script not found."));
+    }
   });
 };
 
@@ -38,7 +40,7 @@ export default function TunePocketApp() {
   const [processingMessage, setProcessingMessage] = useState('Initializing...');
   const { toast } = useToast();
 
-  const loadSongs = useCallback(async () => {
+  const loadSongsFromDB = useCallback(async () => {
     try {
       await initDB();
       const storedSongs = await getSongs();
@@ -48,28 +50,24 @@ export default function TunePocketApp() {
       toast({ title: "Error", description: "Could not load song library.", variant: "destructive" });
     }
   }, [toast]);
-
-  const processFile = useCallback(async (file: File | Blob, fileName?: string, chatId?: string) => {
-    if (file.size > 50 * 1024 * 1024) { // 50MB limit
-        toast({ title: "File too large", description: "Please select a file smaller than 50MB.", variant: "destructive" });
-        return;
-    }
-    
-    setIsLoading(true);
-    setProcessingMessage('Reading metadata...');
-    
-    try {
+  
+  const processAndSaveSong = useCallback(async (file: File | Blob, defaultTitle: string): Promise<Song> => {
+      if (file.size > 50 * 1024 * 1024) { // 50MB limit
+          throw new Error("File is larger than 50MB limit.");
+      }
+      
+      setProcessingMessage('Reading metadata...');
       const mmb = await getMmb();
       const metadata = await mmb.parseBlob(file);
       
-      const title = metadata.common.title || fileName || 'Unknown Title';
+      const title = metadata.common.title || defaultTitle;
       const artist = metadata.common.artist || 'Unknown Artist';
       const genre = metadata.common.genre?.[0] || 'Unknown';
       
       setProcessingMessage('Categorizing song...');
       const { category, subCategory } = await categorizeSongsByGenre({ title, artist, genre });
       
-      const newSong: Omit<Song, 'id'> = {
+      const newSongData: Omit<Song, 'id'> = {
         title,
         artist,
         genre,
@@ -82,102 +80,108 @@ export default function TunePocketApp() {
       };
       
       setProcessingMessage('Saving to library...');
-      await addSong(newSong);
-      await loadSongs();
+      const newId = await addSong(newSongData);
       
-      toast({ title: "Song Added!", description: `${title} by ${artist} has been added to your library.` });
-      
-      if (chatId) {
-        setProcessingMessage('Sending confirmation...');
-        await sendTelegramMessage({
-          chatId: chatId,
-          text: `✅ Song "${title}" by ${artist} was successfully added to your TunePocket library!`,
-        });
-      }
+      const finalSong = { ...newSongData, id: newId };
+      setSongs(prevSongs => [...prevSongs, finalSong]);
 
-    } catch (error: any) {
-      console.error('Failed to process file', error);
-      toast({ title: "Processing Failed", description: error.message || "Could not process the audio file. Please try again.", variant: "destructive" });
-      if (chatId) {
-        await sendTelegramMessage({
-          chatId: chatId,
-          text: `❌ Failed to add song to your library. Error: ${error.message}`,
-        });
-      }
-    } finally {
-      setIsLoading(false);
-      setProcessingMessage('');
-    }
-  }, [loadSongs, toast]);
+      return finalSong;
 
-  const downloadAndProcessFromTg = useCallback(async (param: string) => {
+  }, []);
+
+  const handleManualUpload = useCallback(async (file: File) => {
     setIsLoading(true);
-    setProcessingMessage('Downloading from Telegram...');
     try {
-      const [fileId, chatId] = param.split('_');
-      if (!fileId || !chatId) {
-        throw new Error('Invalid start parameter from Telegram.');
-      }
-
-      const response = await getTelegramFile({ fileId });
-      if (!response.ok) throw new Error('Failed to download file from Telegram');
-      
-      const blob = await response.blob();
-      
-      let fileName = 'telegram-song.mp3';
-      const contentDisposition = response.headers.get('content-disposition');
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-        if (filenameMatch && filenameMatch[1]) {
-            fileName = filenameMatch[1];
-        }
-      }
-      
-      await processFile(blob, fileName, chatId);
-      
-      if (window.history.pushState) {
-        const url = new URL(window.location.href);
-        const params = new URLSearchParams(url.hash.slice(1));
-        if (params.get('tgWebAppStartParam') === param) {
-          params.delete('tgWebAppStartParam');
-          url.hash = params.toString();
-          window.history.replaceState({}, document.title, url.toString());
-        }
-      }
-
+        const savedSong = await processAndSaveSong(file, file.name);
+        toast({ title: "Song Added!", description: `\'\'\'${savedSong.title}\'\'\' has been added.` });
     } catch (error: any) {
-      console.error("Error fetching from Telegram via flow:", error);
-      toast({ title: "Download Failed", description: error.message || "Could not download the song from Telegram.", variant: "destructive" });
+        console.error('Failed to process file', error);
+        toast({ title: "Processing Failed", description: error.message || "Could not process the audio file.", variant: "destructive" });
     } finally {
         setIsLoading(false);
         setProcessingMessage('');
     }
-  }, [processFile, toast]);
+  }, [processAndSaveSong, toast]);
 
+
+  const handleTelegramFile = useCallback(async (param: string) => {
+    setIsLoading(true);
+    let chatId: string | undefined;
+
+    try {
+        const parts = param.split('_');
+        const fileId = parts[0];
+        chatId = parts[1];
+
+        if (!fileId || !chatId) {
+            throw new Error('Invalid start parameter from Telegram.');
+        }
+
+        setProcessingMessage('Downloading from Telegram...');
+        const response = await getTelegramFile({ fileId });
+
+        if (!response.ok) {
+            throw new Error(`Failed to download file from Telegram. Status: ${response.status}`);
+        }
+        
+        const blob = await response.blob();
+        
+        let fileName = 'telegram-song.mp3';
+        const contentDisposition = response.headers.get('content-disposition');
+        if (contentDisposition) {
+            const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+            if (filenameMatch?.[1]) {
+                fileName = filenameMatch[1];
+            }
+        }
+      
+        const savedSong = await processAndSaveSong(blob, fileName);
+      
+        toast({ title: "Song Added!", description: `\'\'\'${savedSong.title}\'\'\' by ${savedSong.artist} has been added.` });
+        
+        setProcessingMessage('Sending confirmation...');
+        await sendTelegramMessage({
+          chatId: chatId,
+          text: `✅ Song "\'\'\'${savedSong.title}\'\'\'" was successfully added to your TunePocket library!`,
+        });
+
+    } catch (error: any) {
+        console.error("Error handling Telegram file:", error);
+        toast({ title: "Processing Failed", description: error.message || "Could not process the song from Telegram.", variant: "destructive" });
+        if (chatId) {
+            await sendTelegramMessage({
+                chatId: chatId,
+                text: `❌ Failed to add song to your library. Error: ${error.message}`,
+            });
+        }
+    } finally {
+        setIsLoading(false);
+        setProcessingMessage('');
+        // Clean the hash to prevent re-processing on refresh
+        if (window.history.replaceState) {
+            const url = new URL(window.location.href);
+            url.hash = '';
+            window.history.replaceState({}, document.title, url.toString());
+        }
+    }
+  }, [processAndSaveSong, toast]);
   
   useEffect(() => {
-    const initialize = async () => {
-      setIsLoading(true);
-      setProcessingMessage('Initializing...');
-      await initDB();
-      await loadSongs();
+    const initializeApp = async () => {
+      setProcessingMessage('Loading library...');
+      await loadSongsFromDB();
+      
+      const urlParams = new URLSearchParams(window.location.hash.slice(1));
+      const startParam = urlParams.get('tgWebAppStartParam') || tg?.initDataUnsafe?.start_param;
 
-      const getParamFromHash = () => {
-        const hash = window.location.hash;
-        const urlParams = new URLSearchParams(hash.slice(1));
-        return urlParams.get('tgWebAppStartParam');
+      if (startParam) {
+        await handleTelegramFile(startParam);
       }
-
-      const initialParam = getParamFromHash() || (tg?.initDataUnsafe?.start_param);
-      if (initialParam) {
-        await downloadAndProcessFromTg(initialParam);
-      }
-
       setIsLoading(false);
       setProcessingMessage('');
     };
-    initialize();
-  }, [loadSongs, downloadAndProcessFromTg, tg]);
+    initializeApp();
+  }, [loadSongsFromDB, handleTelegramFile, tg]);
 
 
   useEffect(() => {
@@ -185,16 +189,12 @@ export default function TunePocketApp() {
         const urlParams = new URLSearchParams(window.location.hash.slice(1));
         const newParam = urlParams.get('tgWebAppStartParam');
         if (newParam) {
-            downloadAndProcessFromTg(newParam);
+            handleTelegramFile(newParam);
         }
     };
-    
     window.addEventListener('hashchange', handleHashChange);
-    
-    return () => {
-        window.removeEventListener('hashchange', handleHashChange);
-    };
-  }, [downloadAndProcessFromTg]);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [handleTelegramFile]);
 
 
   const handlePlayPause = () => {
@@ -278,7 +278,7 @@ export default function TunePocketApp() {
             <div className="p-4 space-y-4">
                 <SongList groupedSongs={groupedSongs} onSelectSong={handleSelectSong} currentSong={currentSong} />
                 <Separator />
-                <FileUpload onFileSelect={(file) => processFile(file)} isLoading={isLoading} />
+                <FileUpload onFileSelect={handleManualUpload} isLoading={isLoading} />
             </div>
         </ScrollArea>
        </main>
