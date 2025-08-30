@@ -3,8 +3,8 @@ from telegram import Update, WebAppInfo
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # --- Configuration ---
-BOT_TOKEN = "YOUR_HTTP_API_TOKEN"  # Replace with your token from BotFather
-MINI_APP_URL = "https://your-pwa-url.com"  # Replace with your deployed PWA's URL
+BOT_TOKEN = "8317334769:AAHHl5uEcSbcvBjwXdnDXLmBuN41RMTC_w0"  # Replace with your token from BotFather
+MINI_APP_URL = "https://9000-firebase-studio-1756580205727.cluster-64pjnskmlbaxowh5lzq6i7v4ra.cloudworkstations.dev"  # Replace with your deployed PWA's URL
 # ---------------------
 
 # Enable logging
