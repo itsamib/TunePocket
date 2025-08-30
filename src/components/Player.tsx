@@ -137,7 +137,7 @@ export default function Player({ currentSong, isPlaying, onPlayPause, onNext, on
           </div>
 
           <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
-            <div className="hidden md:flex items-center gap-2">
+             <div className="hidden md:flex items-center gap-2">
                 <Button variant="ghost" size="icon" onClick={() => setIsMuted(!isMuted)}>
                     {isMuted || volume === 0 ? <VolumeX /> : <Volume2 />}
                 </Button>
