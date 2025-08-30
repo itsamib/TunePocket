@@ -16,11 +16,18 @@ export const useTelegram = () => {
       if (param) {
         setStartParam(param);
       }
-      
-      // Set theme
-      document.documentElement.className = telegramApp.colorScheme;
     }
   }, []);
+  
+  // This effect runs only on the client, after the initial render.
+  useEffect(() => {
+    if (tg) {
+        document.documentElement.className = tg.colorScheme;
+    } else {
+        // Default to dark theme if not in telegram
+        document.documentElement.className = 'dark';
+    }
+  }, [tg])
 
   return { tg, startParam };
 };
