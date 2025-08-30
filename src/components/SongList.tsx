@@ -14,9 +14,17 @@ interface SongListProps {
 }
 
 export function SongList({ groupedSongs, onSelectSong, currentSong }: SongListProps) {
+  if (Object.keys(groupedSongs).length === 0) {
+    return (
+        <div className="text-center text-muted-foreground p-8">
+            <p className="font-headline text-lg">Your Library is Empty</p>
+            <p>Add songs by uploading a file below or sending an audio file to the Telegram bot.</p>
+        </div>
+    )
+  }
+    
   return (
-    <ScrollArea className="h-full w-full">
-      <div className="p-4 pb-20">
+    <div>
         <h2 className="text-2xl font-headline font-bold mb-4 flex items-center gap-2"><Library /> My Library</h2>
         <Accordion type="multiple" className="w-full">
           {Object.keys(groupedSongs).sort().map(genre => (
@@ -63,6 +71,5 @@ export function SongList({ groupedSongs, onSelectSong, currentSong }: SongListPr
           ))}
         </Accordion>
       </div>
-    </ScrollArea>
   );
 }

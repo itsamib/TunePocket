@@ -4,9 +4,10 @@ import type { Song } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Music, Loader2 } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Music, Loader2, Wifi, WifiOff } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import { Badge } from './ui/badge';
 
 interface PlayerProps {
   currentSong: Song | null;
@@ -15,9 +16,10 @@ interface PlayerProps {
   onNext: () => void;
   onPrev: () => void;
   isLoading: boolean;
+  telegramUser: any;
 }
 
-export default function Player({ currentSong, isPlaying, onPlayPause, onNext, onPrev, isLoading }: PlayerProps) {
+export default function Player({ currentSong, isPlaying, onPlayPause, onNext, onPrev, isLoading, telegramUser }: PlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [progress, setProgress] = useState(0);
   const [volume, setVolume] = useState(0.75);
@@ -95,7 +97,7 @@ export default function Player({ currentSong, isPlaying, onPlayPause, onNext, on
       />
       <Card className="fixed bottom-0 left-0 right-0 z-50 rounded-t-lg rounded-b-none border-t border-x-0 border-b-0 shadow-2xl">
         <CardContent className="p-4 flex items-center gap-4">
-          <div className="flex items-center gap-4 w-1/3">
+          <div className="flex items-center gap-4 flex-1 min-w-0">
              <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center shrink-0">
               {artworkUrl ? (
                 <Image src={artworkUrl} alt="Album art" width={64} height={64} className="rounded-md object-cover w-16 h-16"/>
@@ -109,7 +111,7 @@ export default function Player({ currentSong, isPlaying, onPlayPause, onNext, on
             </div>
           </div>
           
-          <div className="flex flex-col items-center gap-2 flex-grow w-1/3">
+          <div className="flex flex-col items-center gap-2 flex-grow">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" onClick={onPrev} disabled={!currentSong}>
                 <SkipBack />
@@ -121,7 +123,7 @@ export default function Player({ currentSong, isPlaying, onPlayPause, onNext, on
                 <SkipForward />
               </Button>
             </div>
-            <div className="w-full flex items-center gap-2 text-xs">
+            <div className="w-full flex items-center gap-2 text-xs max-w-xs">
               <span>{formatTime(currentTime)}</span>
               <Slider
                 value={[progress]}
@@ -134,17 +136,34 @@ export default function Player({ currentSong, isPlaying, onPlayPause, onNext, on
             </div>
           </div>
 
-          <div className="flex items-center gap-2 w-1/3 justify-end">
-            <Button variant="ghost" size="icon" onClick={() => setIsMuted(!isMuted)}>
-                {isMuted || volume === 0 ? <VolumeX /> : <Volume2 />}
-            </Button>
-            <Slider
-              value={[isMuted ? 0 : volume]}
-              onValueChange={handleVolumeChange}
-              max={1}
-              step={0.05}
-              className="w-24"
-            />
+          <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
+            <div className="hidden md:flex items-center gap-2">
+                <Button variant="ghost" size="icon" onClick={() => setIsMuted(!isMuted)}>
+                    {isMuted || volume === 0 ? <VolumeX /> : <Volume2 />}
+                </Button>
+                <Slider
+                value={[isMuted ? 0 : volume]}
+                onValueChange={handleVolumeChange}
+                max={1}
+                step={0.05}
+                className="w-24"
+                />
+            </div>
+            <div className="truncate">
+             {telegramUser ? (
+                <Badge variant="secondary" className="flex items-center gap-1.5">
+                    <Wifi className="text-green-500 w-4 h-4" />
+                    <span className="truncate">
+                        {telegramUser.username ? `@${telegramUser.username}` : `${telegramUser.first_name}`}
+                    </span>
+                </Badge>
+            ): (
+                <Badge variant="destructive" className="flex items-center gap-1.5">
+                    <WifiOff className="w-4 h-4" />
+                    Offline
+                </Badge>
+            )}
+            </div>
           </div>
         </CardContent>
       </Card>

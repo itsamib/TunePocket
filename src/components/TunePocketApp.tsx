@@ -14,6 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Music, Wifi, WifiOff } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
+import { ScrollArea } from './ui/scroll-area';
+import { Separator } from './ui/separator';
 
 const getMmb = (): Promise<typeof window.musicMetadataBrowser> => {
   return new Promise((resolve, reject) => {
@@ -21,12 +23,8 @@ const getMmb = (): Promise<typeof window.musicMetadataBrowser> => {
       return resolve(window.musicMetadataBrowser);
     }
     const script = document.querySelector('script[src*="music-metadata-browser"]');
-    if (script) {
-        script.addEventListener('load', () => resolve(window.musicMetadataBrowser));
-        script.addEventListener('error', () => reject(new Error("Metadata library failed to load.")));
-    } else {
-        reject(new Error("Metadata script not found."));
-    }
+    script?.addEventListener('load', () => resolve(window.musicMetadataBrowser));
+    script?.addEventListener('error', () => reject(new Error("Metadata library failed to load.")));
   });
 };
 
@@ -136,7 +134,6 @@ export default function TunePocketApp() {
       
       await processFile(blob, fileName, chatId);
       
-      // Clear startParam from URL only on success
       if (window.history.pushState) {
         const url = new URL(window.location.href);
         const params = new URLSearchParams(url.hash.slice(1));
@@ -271,43 +268,20 @@ export default function TunePocketApp() {
   }
 
   return (
-    <div className="flex h-full w-full bg-background text-foreground">
-      <aside className="w-1/3 h-full border-r border-border overflow-hidden relative">
-        <SongList groupedSongs={groupedSongs} onSelectSong={handleSelectSong} currentSong={currentSong} />
-        <div className="absolute bottom-0 left-0 right-0 p-2 border-t bg-background/80 backdrop-blur-sm">
-            {user ? (
-                <Badge variant="secondary" className="flex items-center gap-2">
-                    <Wifi className="text-green-500" />
-                    Connected as {user.username || `${user.first_name} ${user.last_name || ''}`}
-                </Badge>
-            ): (
-                <Badge variant="destructive" className="flex items-center gap-2">
-                    <WifiOff />
-                    Not connected to Telegram
-                </Badge>
-            )}
-        </div>
-      </aside>
-      <main className="w-2/3 h-full overflow-y-auto">
-        {currentSong?.artwork ? (
-            <div className="relative w-full h-full flex items-center justify-center">
-                <Image 
-                    src={URL.createObjectURL(new Blob([currentSong.artwork.data], {type: currentSong.artwork.format}))}
-                    alt="Current song artwork"
-                    fill
-                    className="object-cover opacity-20 blur-xl"
-                />
-                <Card className="z-10 w-2/3 max-w-sm shadow-2xl">
-                    <CardContent className="p-4">
-                       <FileUpload onFileSelect={(file) => processFile(file)} isLoading={isLoading} />
-                    </CardContent>
-                </Card>
+    <div className="h-screen w-screen flex flex-col bg-background text-foreground">
+       <header className="p-4 border-b">
+         <h1 className="text-2xl font-headline text-primary text-center">TunePocket</h1>
+       </header>
+       <main className="flex-grow overflow-hidden">
+        <ScrollArea className="h-full">
+            <div className="p-4 space-y-4">
+                <SongList groupedSongs={groupedSongs} onSelectSong={handleSelectSong} currentSong={currentSong} />
+                <Separator />
+                <FileUpload onFileSelect={(file) => processFile(file)} isLoading={isLoading} />
             </div>
-        ) : (
-            <FileUpload onFileSelect={(file) => processFile(file)} isLoading={isLoading} />
-        )}
-      </main>
-      <div className="pb-28" /> {/* Spacer for player */}
+        </ScrollArea>
+       </main>
+      <div className="pb-36" /> {/* Spacer for player */}
       <Player 
         currentSong={currentSong} 
         isPlaying={isPlaying} 
@@ -315,6 +289,7 @@ export default function TunePocketApp() {
         onNext={playNext}
         onPrev={playPrev}
         isLoading={isLoading}
+        telegramUser={user}
       />
     </div>
   );
