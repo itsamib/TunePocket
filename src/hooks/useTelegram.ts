@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 
+// This hook is no longer in use and can be removed in the future.
+// The logic has been integrated directly into TunePocketApp.tsx for simplicity and reliability.
 export const useTelegram = () => {
   const [tg, setTg] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
