@@ -38,15 +38,21 @@ const getTelegramFileFlow = ai.defineFlow(
     
     // 1. Get the file path from Telegram
     const fileInfoUrl = `https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`;
-    const fileInfoResponse = await fetch(fileInfoUrl);
-    
-    if (!fileInfoResponse.ok) {
-        const errorData = await fileInfoResponse.json();
-        console.error("Telegram getFile API error:", errorData);
-        throw new Error(`Failed to get file info from Telegram: ${errorData.description}`);
+    let fileInfoResponse;
+    try {
+        fileInfoResponse = await fetch(fileInfoUrl);
+    } catch (e: any) {
+        console.error("Failed to fetch file info from Telegram API", e);
+        throw new Error(`Network error when calling Telegram getFile API: ${e.message}`);
     }
     
     const fileInfo = await fileInfoResponse.json();
+
+    if (!fileInfoResponse.ok || !fileInfo.ok) {
+        console.error("Telegram getFile API error:", fileInfo);
+        throw new Error(`Failed to get file info from Telegram: ${fileInfo.description || 'Unknown error'}`);
+    }
+    
     const filePath = fileInfo.result.file_path;
     
     // 2. Construct the file download URL
@@ -56,13 +62,18 @@ const getTelegramFileFlow = ai.defineFlow(
     const fileResponse = await fetch(fileUrl);
     
     if (!fileResponse.ok || !fileResponse.body) {
-        throw new Error("Failed to download the file from Telegram servers.");
+        const errorBody = await fileResponse.text();
+        console.error("Failed to download file from Telegram servers. Status:", fileResponse.status, "Body:", errorBody);
+        throw new Error(`Failed to download the file from Telegram servers. Status: ${fileResponse.status}`);
     }
 
     // Create a new response with the file's body and headers
     const headers = new Headers();
-    headers.set('Content-Type', fileResponse.headers.get('Content-Type') || 'application/octet-stream');
-    headers.set('Content-Disposition', `attachment; filename="${filePath.split('/').pop()}"`);
+    const contentType = fileResponse.headers.get('Content-Type') || 'application/octet-stream';
+    const fileName = filePath.split('/').pop() || 'song.mp3';
+
+    headers.set('Content-Type', contentType);
+    headers.set('Content-Disposition', `attachment; filename="${fileName}"`);
 
     return new Response(fileResponse.body, {
         status: 200,
