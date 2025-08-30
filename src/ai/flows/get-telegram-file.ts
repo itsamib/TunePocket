@@ -54,9 +54,9 @@ const getTelegramFileFlow = ai.defineFlow(
     
     const fileInfo = await fileInfoResponse.json();
 
-    if (!fileInfo.ok) {
-        console.error("Telegram getFile API error:", fileInfo);
-        throw new Error(`Failed to get file info from Telegram: ${fileInfo.description || 'Unknown error'}`);
+    if (!fileInfo.ok || !fileInfo.result?.file_path) {
+        console.error("Telegram getFile API error or file_path missing:", fileInfo);
+        throw new Error(`Failed to get file info from Telegram: ${fileInfo.description || 'File path not available.'}`);
     }
     
     const filePath = fileInfo.result.file_path;
