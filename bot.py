@@ -1,7 +1,7 @@
 
 import logging
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 
 # --- Configuration ---
 # CRITICAL: The URL below MUST be a PUBLICLY ACCESSIBLE URL.
@@ -24,15 +24,28 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Handler for the /start command
+# --- Keyboard Layouts ---
+def get_main_menu_keyboard():
+    """Returns the main menu inline keyboard."""
+    keyboard = [
+        [InlineKeyboardButton("🎵 Open TunePocket", web_app={'url': MINI_APP_URL})],
+        [
+            InlineKeyboardButton("👤 My Profile", callback_data='show_profile'),
+            InlineKeyboardButton("📊 Server Status", callback_data='check_status')
+        ]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+# --- Command Handlers ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Sends a welcome message and a button to open the Mini App."""
-    await update.message.reply_text(
-        "Welcome to TunePocket! Send me an MP3 file, and I'll add it to your library.",
-        reply_markup={'inline_keyboard': [[{'text': 'Open TunePocket', 'web_app': {'url': MINI_APP_URL}}]]}
+    """Sends a welcome message with the main menu."""
+    user = update.effective_user
+    await update.message.reply_html(
+        rf"Hi {user.mention_html()}! Welcome to TunePocket.",
+        reply_markup=get_main_menu_keyboard()
     )
 
-# Handler for audio messages (MP3 files)
+# --- Message Handlers ---
 async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handles audio files by creating a deep link to the Mini App."""
     audio_file = update.message.audio
@@ -42,27 +55,13 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
 
     try:
-        # We create a special start_param for the Mini App. It combines the file_id
-        # and the chat_id, separated by an underscore. The Mini App will parse this
-        # to fetch the file and send a confirmation message back to the correct user.
         start_param = f"{audio_file.file_id}_{chat_id}"
-        
-        # Construct the deep link URL for the Mini App
         app_url_with_param = f"{MINI_APP_URL}#tgWebAppStartParam={start_param}"
         
         logger.info(f"Generated Mini App URL: {app_url_with_param}")
 
-        # Create an inline keyboard button that opens the Mini App with the parameter
-        keyboard = [
-            [
-                {
-                    'text': "Process in TunePocket",
-                    'web_app': {'url': app_url_with_param}
-                }
-            ]
-        ]
-        
-        reply_markup = {'inline_keyboard': keyboard}
+        keyboard = [[InlineKeyboardButton("Process in TunePocket", web_app={'url': app_url_with_param})]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
 
         await update.message.reply_text(
             f"Ready to process '{audio_file.title or 'this song'}'. Click below to open and add to your library:",
@@ -73,6 +72,28 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         logger.error(f"Error handling audio: {e}", exc_info=True)
         await update.message.reply_text("Sorry, I couldn't process that file. Please try again.")
 
+# --- Callback Query Handler ---
+async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Parses the CallbackQuery and updates the message text."""
+    query = update.callback_query
+    await query.answer()  # Acknowledge the button press
+
+    if query.data == 'show_profile':
+        user = query.from_user
+        profile_text = (
+            f"<b>Your Telegram Profile:</b>\n\n"
+            f"<b>First Name:</b> {user.first_name}\n"
+            f"<b>Last Name:</b> {user.last_name or 'Not set'}\n"
+            f"<b>Username:</b> @{user.username or 'Not set'}\n"
+            f"<b>User ID:</b> <code>{user.id}</code>\n"
+        )
+        await query.edit_message_text(text=profile_text, parse_mode='HTML', reply_markup=get_main_menu_keyboard())
+    
+    elif query.data == 'check_status':
+        status_text = "✅ Bot is running correctly!"
+        await query.edit_message_text(text=status_text, reply_markup=get_main_menu_keyboard())
+
+# --- Main Bot Function ---
 def main() -> None:
     """Starts the bot and runs it until Ctrl-C is pressed."""
     if BOT_TOKEN == "YOUR_HTTP_API_TOKEN" or MINI_APP_URL == "https://your-mini-app-url.com":
@@ -87,6 +108,7 @@ def main() -> None:
     # Register handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.AUDIO, handle_audio))
+    application.add_handler(CallbackQueryHandler(handle_callback_query))
 
     # Start the bot
     logger.info("Bot is running...")
