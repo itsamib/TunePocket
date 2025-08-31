@@ -1,19 +1,22 @@
 # TunePocket: Telegram Mini App
 
-This is a Next.js starter project for a Telegram Mini App called TunePocket. It allows users to upload MP3 files through a Telegram bot and manage them in a web-based player.
+This is a Next.js project for a Telegram Mini App called TunePocket. It allows users to upload MP3 files through a Telegram bot and manage them in a web-based player with offline capabilities.
 
-## Running the Application
+## How It Works
 
-This project consists of two separate parts that must be run concurrently:
-
-1.  **The Next.js Web App (Mini App):** This is the user interface that users interact with inside Telegram.
-2.  **The Python Telegram Bot:** This is the backend script that listens for messages and file uploads sent to the bot on Telegram.
-
-You will need **two separate terminals** to run this application.
+1.  **User Sends MP3:** A user sends an MP3 file to your Telegram bot.
+2.  **Bot Responds:** The Python bot (`bot.py`) does *not* save the file. Instead, it gets the file's unique `file_id` from Telegram and sends a special button back to the user.
+3.  **User Opens Mini App:** The user clicks the button, which opens your Next.js web application (the Mini App) inside Telegram, passing the `file_id` to it.
+4.  **App Downloads & Saves:** The Mini App uses the `file_id` to download the song directly from Telegram's servers, extracts its metadata (title, artist), and saves the actual audio file into the browser's local storage (IndexedDB).
+5.  **Offline Playback:** The user can now play their music from the Mini App, even without an internet connection, because the files are stored on their own device.
 
 ---
 
-### Terminal 1: Run the Web App
+## Running the Application
+
+This project has **two separate parts** that must run at the same time in **two separate terminals**.
+
+### Terminal 1: Run the Web App (Next.js)
 
 In your first terminal, run the following command to start the Next.js development server:
 
@@ -23,48 +26,37 @@ npm run dev
 
 This will make the web application available, usually on `http://localhost:9002`.
 
----
+### Terminal 2: Run the Telegram Bot (Python)
 
-### Terminal 2: Run the Telegram Bot
+In your second terminal, you must run the Python script for the bot.
 
-In your second terminal, you need to run the Python script for the bot.
+#### **CRITICAL: Python Environment Setup**
 
-#### **Environment Setup (Crucial Step)**
+Your development environment is managed by **Nix**. This means standard Python installation methods (`pip`, `venv`) will **fail** with an `externally-managed-environment` error.
 
-Your development environment is managed by **Nix**. This means standard Python installation methods (`pip`, `venv`, `conda`) will **not** work correctly and will result in an `externally-managed-environment` error.
+To run the bot, you **MUST** configure your Nix environment correctly.
 
-To run the Python bot, you must first add the required Python packages to your environment's configuration file.
+1.  **Find your Nix configuration file:** Find the file named `dev.nix` or `.replit` in your project's root directory. This is the central file that defines your development environment.
 
-1.  **Locate your Nix configuration file:** Find the file named `dev.nix` or `.replit` in your project's root directory.
-
-2.  **Add Python dependencies:** Edit this file to include the Python interpreter and the `python-telegram-bot` library. Add the following packages to the appropriate list (e.g., inside `dev.nix`'s `packages` or `.replit`'s `deps` list):
+2.  **Add Python Dependencies:** Edit this file and add the following packages to the list of environment packages (e.g., inside `dev.nix`'s `packages` or `.replit`'s `deps` list). This tells Nix to install Python and the necessary library.
 
     ```nix
+    # Add these lines to your Nix config file (e.g., dev.nix)
     pkgs.python311Full
     pkgs.python311Packages.pip
     pkgs.python311Packages.python-telegram-bot
     ```
 
-3.  **Rebuild the environment:** After saving the file, your environment should automatically rebuild. If not, you may need to restart the development server or manually trigger a re-build according to your platform's documentation. This step is essential for the changes to take effect.
+3.  **Rebuild the Environment:** After saving the file, your environment must be rebuilt for the changes to take effect. This usually happens automatically. If not, restart your development workspace.
 
-#### **Running the Bot Script**
+#### **Configure and Run the Bot Script**
 
-Once your environment is correctly configured with the Python packages, run the bot using the following command:
+1.  **Edit `bot.py`:** Open the `bot.py` file and replace the placeholder values for `BOT_TOKEN` and `MINI_APP_URL` with your actual bot token and the URL of your web app.
 
-```bash
-npm run bot:run
-```
+2.  **Run the bot:** Once the environment is correctly configured, run the bot using this command:
 
-Alternatively, you can run the script directly. Start with `python3`:
+    ```bash
+    npm run bot:run
+    ```
 
-```bash
-python3 bot.py
-```
-
-If `python3` is not found, try `python`:
-
-```bash
-python bot.py
-```
-
-You should see a log message in the console, such as `Bot is running...`, which confirms that the bot is active and listening for messages.
+    You should see a log message confirming the bot is running. If you still get a `command not found` error, it means the Nix environment setup (Step 2) was not successful.

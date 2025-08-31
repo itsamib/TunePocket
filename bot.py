@@ -1,11 +1,13 @@
 
 import logging
-from telegram import Update, WebAppInfo
+from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # --- Configuration ---
-BOT_TOKEN = "8317334769:AAHHl5uEcSbcvBjwXdnDXLmBuN41RMTC_w0"  # Replace with your token from BotFather
-MINI_APP_URL = "https://9000-firebase-studio-1756580205727.cluster-64pjnskmlbaxowh5lzq6i7v4ra.cloudworkstations.dev"  # Replace with your deployed PWA's URL
+# IMPORTANT: Replace with your actual Bot Token from BotFather
+BOT_TOKEN = "YOUR_HTTP_API_TOKEN"
+# IMPORTANT: Replace with your actual Mini App URL after deployment or during testing (e.g., ngrok URL)
+MINI_APP_URL = "https://your-mini-app-url.com"
 # ---------------------
 
 # Enable logging
@@ -16,13 +18,15 @@ logger = logging.getLogger(__name__)
 
 # Handler for the /start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Sends a welcome message and a button to open the Mini App."""
     await update.message.reply_text(
         "Welcome to TunePocket! Send me an MP3 file, and I'll add it to your library.",
         reply_markup={'inline_keyboard': [[{'text': 'Open TunePocket', 'web_app': {'url': MINI_APP_URL}}]]}
     )
 
-# Handler for audio messages
+# Handler for audio messages (MP3 files)
 async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handles audio files by creating a deep link to the Mini App."""
     audio_file = update.message.audio
     chat_id = update.message.chat_id
     if not audio_file:
@@ -30,9 +34,9 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
 
     try:
-        # We will create a special URL to open the web app with the file_id and chat_id
-        # The web app will use these to fetch the file and send a confirmation message back.
-        # We combine them with an underscore, e.g., "fileid_chatid"
+        # We create a special start_param for the Mini App. It combines the file_id
+        # and the chat_id, separated by an underscore. The Mini App will parse this
+        # to fetch the file and send a confirmation message back to the correct user.
         start_param = f"{audio_file.file_id}_{chat_id}"
         
         # Construct the deep link URL for the Mini App
@@ -40,7 +44,7 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         
         logger.info(f"Generated Mini App URL: {app_url_with_param}")
 
-        # Create an inline keyboard button to open the Mini App
+        # Create an inline keyboard button that opens the Mini App with the parameter
         keyboard = [
             [
                 {
@@ -58,18 +62,25 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         )
 
     except Exception as e:
-        logger.error(f"Error handling audio: {e}")
+        logger.error(f"Error handling audio: {e}", exc_info=True)
         await update.message.reply_text("Sorry, I couldn't process that file. Please try again.")
 
 def main() -> None:
-    """Start the bot."""
+    """Starts the bot and runs it until Ctrl-C is pressed."""
+    if BOT_TOKEN == "YOUR_HTTP_API_TOKEN" or MINI_APP_URL == "https://your-mini-app-url.com":
+        logger.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        logger.error("!!! BOT_TOKEN or MINI_APP_URL is not configured in bot.py !!!")
+        logger.error("!!! Please edit the file and set the correct values.     !!!")
+        logger.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        return
+        
     application = Application.builder().token(BOT_TOKEN).build()
 
     # Register handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.AUDIO, handle_audio))
 
-    # Run the bot until the user presses Ctrl-C
+    # Start the bot
     logger.info("Bot is running...")
     application.run_polling()
 
