@@ -55,6 +55,8 @@ export default function TunePocketApp() {
     setProcessingMessage('Categorizing song...');
     const { category, subCategory } = await categorizeSongsByGenre({ title, artist, genre });
     
+    const artwork = metadata.common.picture?.[0];
+
     const newSongData: Omit<Song, 'id' | 'localURL'> = {
       title,
       artist,
@@ -63,7 +65,7 @@ export default function TunePocketApp() {
       subCategory,
       fileBlob: file,
       duration: metadata.format.duration || 0,
-      artwork: metadata.common.picture?.[0],
+      artwork: artwork ? { data: artwork.data, format: artwork.format } : undefined,
     };
     
     setProcessingMessage('Saving to library...');
