@@ -6,14 +6,9 @@
  * - GetTelegramFileInput - The input type for the getTelegramFile function.
  * - GetTelegramFileOutput - The output type for the getTelegramFile function.
  */
-import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-
-if (!BOT_TOKEN) {
-  console.warn("TELEGRAM_BOT_TOKEN environment variable not set. Telegram file fetching will fail.");
-}
 
 const GetTelegramFileInputSchema = z.object({
   fileId: z.string().describe("The file_id provided by Telegram."),
@@ -28,16 +23,7 @@ const GetTelegramFileOutputSchema = z.object({
 export type GetTelegramFileOutput = z.infer<typeof GetTelegramFileOutputSchema>;
 
 export async function getTelegramFile(input: GetTelegramFileInput): Promise<GetTelegramFileOutput> {
-    return getTelegramFileFlow(input);
-}
-
-const getTelegramFileFlow = ai.defineFlow(
-  {
-    name: 'getTelegramFileFlow',
-    inputSchema: GetTelegramFileInputSchema,
-    outputSchema: GetTelegramFileOutputSchema,
-  },
-  async ({ fileId }) => {
+    const { fileId } = input;
     if (!BOT_TOKEN) {
       throw new Error("Telegram Bot Token is not configured on the server. Please set the TELEGRAM_BOT_TOKEN environment variable.");
     }
@@ -92,5 +78,4 @@ const getTelegramFileFlow = ai.defineFlow(
         contentType: contentType,
         fileName: fileName,
     };
-  }
-);
+}
