@@ -51,16 +51,17 @@ export default function TunePocketApp() {
     const title = metadata.common.title || defaultTitle;
     const artist = metadata.common.artist || 'Unknown Artist';
     const genre = metadata.common.genre?.[0] || 'Unknown';
+    const duration = metadata.format.duration || 0;
+    const picture = metadata.common.picture?.[0];
     
+    // IMPORTANT: Convert complex objects to plain data immediately.
+    const artworkData = picture ? { data: picture.data.buffer as ArrayBuffer, format: picture.format } : undefined;
+    const fileArrayBuffer = await file.arrayBuffer();
+
     setProcessingMessage('Categorizing song...');
+    // Only pass plain strings to the server action.
     const { category, subCategory } = await categorizeSongsByGenre({ title, artist, genre });
     
-    const artwork = metadata.common.picture?.[0];
-    
-    // Convert Blob and artwork data to ArrayBuffer BEFORE passing to addSong
-    const fileArrayBuffer = await file.arrayBuffer();
-    const artworkData = artwork ? { data: artwork.data.buffer, format: artwork.format } : undefined;
-
     const newSongData: Omit<Song, 'id' | 'localURL'> = {
       title,
       artist,
@@ -68,20 +69,28 @@ export default function TunePocketApp() {
       category,
       subCategory,
       fileBlob: fileArrayBuffer,
-      duration: metadata.format.duration || 0,
+      duration,
       artwork: artworkData,
     };
     
     setProcessingMessage('Saving to library...');
+    // addSong now receives a plain object with ArrayBuffers.
     const newId = await addSong(newSongData);
     
-    // Re-create the Blob for immediate playback
+    // Re-create a playable blob from the array buffer for immediate use.
     const playableBlob = new Blob([fileArrayBuffer], { type: file.type });
-    const finalSong = { 
-        ...newSongData, 
-        id: newId, 
-        localURL: URL.createObjectURL(playableBlob),
+    
+    const finalSong: Song = { 
+        id: newId,
+        title,
+        artist,
+        genre,
+        category,
+        subCategory,
+        duration,
         fileBlob: playableBlob, // For consistency in the state object
+        localURL: URL.createObjectURL(playableBlob),
+        artwork: picture ? {data: picture.data, format: picture.format} : undefined, // for player component
     };
     
     setSongs(prevSongs => [...prevSongs, finalSong]);
@@ -314,5 +323,3 @@ export default function TunePocketApp() {
     </div>
   );
 }
-
-    
