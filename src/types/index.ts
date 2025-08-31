@@ -17,6 +17,7 @@ export interface Song {
 
 // This interface represents the actual data structure stored in IndexedDB.
 // It only contains serializable data types.
+// This is also the shape of the data that is safe to pass from server to client.
 export interface StoredSong {
   id: number;
   title: string;

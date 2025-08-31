@@ -2,8 +2,9 @@
 /**
  * @fileOverview A flow for securely fetching a file from Telegram.
  *
- * - getTelegramFile - A function that fetches a file's temporary URL from Telegram and streams it back.
+ * - getTelegramFile - A function that fetches a file's content and metadata from Telegram.
  * - GetTelegramFileInput - The input type for the getTelegramFile function.
+ * - GetTelegramFileOutput - The output type for the getTelegramFile function.
  */
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
@@ -17,11 +18,16 @@ if (!BOT_TOKEN) {
 const GetTelegramFileInputSchema = z.object({
   fileId: z.string().describe("The file_id provided by Telegram."),
 });
-
 export type GetTelegramFileInput = z.infer<typeof GetTelegramFileInputSchema>;
 
-// We don't define an output schema because we will return a Response object directly.
-export async function getTelegramFile(input: GetTelegramFileInput): Promise<Response> {
+const GetTelegramFileOutputSchema = z.object({
+    fileBuffer: z.string().describe("The base64 encoded file content."),
+    contentType: z.string().describe("The MIME type of the file."),
+    fileName: z.string().describe("The original name of the file."),
+});
+export type GetTelegramFileOutput = z.infer<typeof GetTelegramFileOutputSchema>;
+
+export async function getTelegramFile(input: GetTelegramFileInput): Promise<GetTelegramFileOutput> {
     return getTelegramFileFlow(input);
 }
 
@@ -29,7 +35,7 @@ const getTelegramFileFlow = ai.defineFlow(
   {
     name: 'getTelegramFileFlow',
     inputSchema: GetTelegramFileInputSchema,
-    // No output schema needed as we are returning a raw Response
+    outputSchema: GetTelegramFileOutputSchema,
   },
   async ({ fileId }) => {
     if (!BOT_TOKEN) {
@@ -64,7 +70,7 @@ const getTelegramFileFlow = ai.defineFlow(
     // 2. Construct the file download URL
     const fileUrl = `https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}`;
     
-    // 3. Fetch the file and stream it back to the client
+    // 3. Fetch the file content
     const fileResponse = await fetch(fileUrl);
     
     if (!fileResponse.ok || !fileResponse.body) {
@@ -73,17 +79,18 @@ const getTelegramFileFlow = ai.defineFlow(
         throw new Error(`Failed to download the file from Telegram servers. Status: ${fileResponse.status}`);
     }
 
-    // Create a new response with the file's body and headers
-    const headers = new Headers();
+    // 4. Convert to ArrayBuffer, then to base64 string (which is serializable)
+    const arrayBuffer = await fileResponse.arrayBuffer();
+    const base64String = Buffer.from(arrayBuffer).toString('base64');
+    
     const contentType = fileResponse.headers.get('Content-Type') || 'application/octet-stream';
     const fileName = filePath.split('/').pop() || 'song.mp3';
 
-    headers.set('Content-Type', contentType);
-    headers.set('Content-Disposition', `attachment; filename="${fileName}"`);
-
-    return new Response(fileResponse.body, {
-        status: 200,
-        headers,
-    });
+    // 5. Return a plain object
+    return {
+        fileBuffer: base64String,
+        contentType: contentType,
+        fileName: fileName,
+    };
   }
 );

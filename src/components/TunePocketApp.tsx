@@ -54,14 +54,12 @@ export default function TunePocketApp() {
     const duration = metadata.format.duration || 0;
     const picture = metadata.common.picture?.[0];
     
-    // IMPORTANT: Convert complex objects to plain data immediately.
-    const artworkData = picture ? { data: picture.data.buffer as ArrayBuffer, format: picture.format } : undefined;
-    const fileArrayBuffer = await file.arrayBuffer();
-
     setProcessingMessage('Categorizing song...');
-    // Only pass plain strings to the server action.
     const { category, subCategory } = await categorizeSongsByGenre({ title, artist, genre });
     
+    const fileArrayBuffer = await file.arrayBuffer();
+    const artworkData = picture ? { data: picture.data.buffer as ArrayBuffer, format: picture.format } : undefined;
+
     const newSongData = {
       title,
       artist,
@@ -74,10 +72,8 @@ export default function TunePocketApp() {
     };
     
     setProcessingMessage('Saving to library...');
-    // addSong now receives a plain object with ArrayBuffers.
     const newId = await addSong(newSongData);
     
-    // Re-create a playable blob from the array buffer for immediate use.
     const playableBlob = new Blob([fileArrayBuffer], { type: file.type });
     
     const finalSong: Song = { 
@@ -88,9 +84,9 @@ export default function TunePocketApp() {
         category,
         subCategory,
         duration,
-        fileBlob: playableBlob, // For consistency in the state object
+        fileBlob: playableBlob,
         localURL: URL.createObjectURL(playableBlob),
-        artwork: picture ? {data: picture.data, format: picture.format} : undefined, // for player component
+        artwork: picture ? {data: picture.data, format: picture.format} : undefined,
     };
     
     setSongs(prevSongs => [...prevSongs, finalSong]);
@@ -112,24 +108,11 @@ export default function TunePocketApp() {
         }
 
         setProcessingMessage('Downloading from Telegram...');
-        const response = await getTelegramFile({ fileId });
+        const { fileBuffer, contentType, fileName } = await getTelegramFile({ fileId });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error("Telegram download error:", errorText);
-            throw new Error(`Failed to download file from Telegram. Status: ${response.status}`);
-        }
-        
-        const blob = await response.blob();
-        
-        let fileName = 'telegram-song.mp3';
-        const contentDisposition = response.headers.get('content-disposition');
-        if (contentDisposition) {
-            const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-            if (filenameMatch?.[1]) {
-                fileName = filenameMatch[1];
-            }
-        }
+        // Convert base64 string from server back to ArrayBuffer, then to Blob on the client
+        const buffer = Buffer.from(fileBuffer, 'base64');
+        const blob = new Blob([buffer], { type: contentType });
       
         const savedSong = await processAndSaveSong(blob, fileName);
       
@@ -182,6 +165,13 @@ export default function TunePocketApp() {
            
            return {
              ...song,
+             id: song.id,
+             title: song.title,
+             artist: song.artist,
+             genre: song.genre,
+             category: song.category,
+             subCategory: song.subCategory,
+             duration: song.duration,
              fileBlob: blob,
              localURL,
              artwork,
