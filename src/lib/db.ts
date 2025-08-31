@@ -17,6 +17,10 @@ const initDBInternal = (): Promise<IDBDatabase> => {
   }
 
   dbPromise = new Promise((resolve, reject) => {
+    // IndexedDB is a browser-only API
+    if (typeof window === 'undefined') {
+        return reject(new Error("IndexedDB can only be used in a browser environment."));
+    }
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onerror = () => {
@@ -59,12 +63,7 @@ export const addSong = (song: Omit<Song, 'id'>): Promise<number> => {
         const transaction = currentDb.transaction([STORE_NAME], 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
         
-        // Convert Blob to ArrayBuffer before storing
-        const fileBlob = song.fileBlob as Blob;
-        const arrayBuffer = await fileBlob.arrayBuffer();
-        const storableSong = { ...song, fileBlob: arrayBuffer };
-        
-        const request = store.add(storableSong);
+        const request = store.add(song);
 
         request.onsuccess = () => {
             resolve(request.result as number);
@@ -89,17 +88,16 @@ export const getSongs = (): Promise<Song[]> => {
         const request = store.getAll();
 
         request.onsuccess = () => {
-            const songsFromDb = request.result as (Omit<Song, 'fileBlob'> & {fileBlob: ArrayBuffer})[];
+            const songsFromDb = request.result as Song[];
             
             const songsWithValidUrls = songsFromDb.map(song => {
                 let localURL = '';
-                let fileBlob: Blob | null = null;
                 if (song.fileBlob) {
-                    fileBlob = new Blob([song.fileBlob], { type: 'audio/mpeg' });
-                    localURL = URL.createObjectURL(fileBlob);
+                   // fileBlob is already a Blob, no need to recreate
+                   localURL = URL.createObjectURL(song.fileBlob as Blob);
                 }
-                return { ...song, fileBlob, localURL };
-            }) as Song[];
+                return { ...song, localURL };
+            });
 
             resolve(songsWithValidUrls);
         };
