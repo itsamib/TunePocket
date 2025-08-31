@@ -4,10 +4,18 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # --- Configuration ---
+# CRITICAL: The URL below MUST be a PUBLICLY ACCESSIBLE URL.
+# Private URLs from development environments like Cloud Workstations will NOT work
+# because Telegram cannot access them, resulting in a 401 Unauthorized error.
+#
+# FOR PRODUCTION: Replace this with your deployed web app's public URL.
+# FOR LOCAL TESTING: Use a tunneling service like ngrok to create a public URL
+# for your local server (e.g., http://localhost:9002) and paste the ngrok URL here.
+
 # IMPORTANT: Replace with your actual Bot Token from BotFather
 BOT_TOKEN = "8317334769:AAHHl5uEcSbcvBjwXdnDXLmBuN41RMTC_w0"
-# IMPORTANT: Replace with your actual Mini App URL after deployment or during testing (e.g., ngrok URL)
-MINI_APP_URL = "https://3000-firebase-studio-1756580205727.cluster-64pjnskmlbaxowh5lzq6i7v4ra.cloudworkstations.dev/"
+# IMPORTANT: Replace with your PUBLIC Mini App URL.
+MINI_APP_URL = "https://your-mini-app-url.com"
 # ---------------------
 
 # Enable logging
