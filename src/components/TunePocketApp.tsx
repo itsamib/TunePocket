@@ -13,21 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
+import { Buffer } from 'buffer';
 
-const getMmb = (): Promise<typeof window.musicMetadataBrowser> => {
-  return new Promise((resolve, reject) => {
-    if (typeof window.musicMetadataBrowser !== 'undefined') {
-      return resolve(window.musicMetadataBrowser);
-    }
-    const script = document.querySelector('script[src*="music-metadata-browser"]');
-    if (script) {
-        script.addEventListener('load', () => resolve(window.musicMetadataBrowser));
-        script.addEventListener('error', () => reject(new Error("Metadata library failed to load.")));
-    } else {
-        reject(new Error("Metadata script not found."));
-    }
-  });
-};
 
 export default function TunePocketApp() {
   const [tg, setTg] = useState<any>(null);
@@ -45,8 +32,14 @@ export default function TunePocketApp() {
     }
     
     setProcessingMessage('Reading metadata...');
-    const mmb = await getMmb();
-    const metadata = await mmb.parseBlob(file);
+    // Dynamically import the library and handle potential Buffer issues
+    const mmb = await import('music-metadata-browser');
+    if (typeof window !== 'undefined') {
+        (window as any).Buffer = Buffer;
+    }
+
+    const fileArrayBuffer = await file.arrayBuffer();
+    const metadata = await mmb.parseBuffer(Buffer.from(fileArrayBuffer), file.type);
     
     const title = metadata.common.title || defaultTitle;
     const artist = metadata.common.artist || 'Unknown Artist';
@@ -57,10 +50,9 @@ export default function TunePocketApp() {
     setProcessingMessage('Categorizing song...');
     const { category, subCategory } = await categorizeSongsByGenre({ title, artist, genre });
     
-    const fileArrayBuffer = await file.arrayBuffer();
     const artworkData = picture ? { data: picture.data.buffer as ArrayBuffer, format: picture.format } : undefined;
 
-    const newSongData = {
+    const newSongData: Omit<StoredSong, 'id'> = {
       title,
       artist,
       genre,
@@ -78,15 +70,10 @@ export default function TunePocketApp() {
     
     const finalSong: Song = { 
         id: newId,
-        title,
-        artist,
-        genre,
-        category,
-        subCategory,
-        duration,
+        ...newSongData,
         fileBlob: playableBlob,
         localURL: URL.createObjectURL(playableBlob),
-        artwork: picture ? {data: picture.data, format: picture.format} : undefined,
+        artwork: picture,
     };
     
     setSongs(prevSongs => [...prevSongs, finalSong]);
@@ -110,7 +97,6 @@ export default function TunePocketApp() {
         setProcessingMessage('Downloading from Telegram...');
         const { fileBuffer, contentType, fileName } = await getTelegramFile({ fileId });
 
-        // Convert base64 string from server back to ArrayBuffer, then to Blob on the client
         const buffer = Buffer.from(fileBuffer, 'base64');
         const blob = new Blob([buffer], { type: contentType });
       
@@ -166,12 +152,6 @@ export default function TunePocketApp() {
            return {
              ...song,
              id: song.id,
-             title: song.title,
-             artist: song.artist,
-             genre: song.genre,
-             category: song.category,
-             subCategory: song.subCategory,
-             duration: song.duration,
              fileBlob: blob,
              localURL,
              artwork,
