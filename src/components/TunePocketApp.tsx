@@ -56,6 +56,10 @@ export default function TunePocketApp() {
     const { category, subCategory } = await categorizeSongsByGenre({ title, artist, genre });
     
     const artwork = metadata.common.picture?.[0];
+    
+    // Convert Blob and artwork data to ArrayBuffer BEFORE passing to addSong
+    const fileArrayBuffer = await file.arrayBuffer();
+    const artworkData = artwork ? { data: artwork.data.buffer, format: artwork.format } : undefined;
 
     const newSongData: Omit<Song, 'id' | 'localURL'> = {
       title,
@@ -63,18 +67,21 @@ export default function TunePocketApp() {
       genre,
       category,
       subCategory,
-      fileBlob: file,
+      fileBlob: fileArrayBuffer,
       duration: metadata.format.duration || 0,
-      artwork: artwork ? { data: artwork.data, format: artwork.format } : undefined,
+      artwork: artworkData,
     };
     
     setProcessingMessage('Saving to library...');
     const newId = await addSong(newSongData);
     
+    // Re-create the Blob for immediate playback
+    const playableBlob = new Blob([fileArrayBuffer], { type: file.type });
     const finalSong = { 
         ...newSongData, 
         id: newId, 
-        localURL: URL.createObjectURL(file) 
+        localURL: URL.createObjectURL(playableBlob),
+        fileBlob: playableBlob, // For consistency in the state object
     };
     
     setSongs(prevSongs => [...prevSongs, finalSong]);
@@ -307,3 +314,5 @@ export default function TunePocketApp() {
     </div>
   );
 }
+
+    
