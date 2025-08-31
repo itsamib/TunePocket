@@ -2,7 +2,7 @@
   "name": "nextn",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
+    "scripts": {
     "dev": "next dev --turbopack",
     "bot:run": "python3 bot.py",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
