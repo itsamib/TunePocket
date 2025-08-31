@@ -171,9 +171,9 @@ export default function TunePocketApp() {
           startParam = telegramApp.initDataUnsafe?.start_param;
       }
       
-      if (!startParam) {
-         const urlParams = new URLSearchParams(window.location.hash.slice(1));
-         startParam = urlParams.get('tgWebAppStartParam');
+      if (!startParam && window.location.hash) {
+         const hashParams = new URLSearchParams(window.location.hash.substring(1));
+         startParam = hashParams.get('tgWebAppStartParam');
       }
 
       if (startParam) {
