@@ -39,7 +39,7 @@ const getTelegramFileFlow = ai.defineFlow(
   },
   async ({ fileId }) => {
     if (!BOT_TOKEN) {
-      throw new Error("Telegram Bot Token is not configured on the server.");
+      throw new Error("Telegram Bot Token is not configured on the server. Please set the TELEGRAM_BOT_TOKEN environment variable.");
     }
     
     // 1. Get the file path from Telegram

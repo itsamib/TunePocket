@@ -44,7 +44,7 @@ const sendTelegramMessageFlow = ai.defineFlow(
   },
   async ({ chatId, text }) => {
     if (!BOT_TOKEN) {
-      throw new Error('Telegram Bot Token is not configured on the server.');
+      throw new Error('Telegram Bot Token is not configured on the server. Please set the TELEGRAM_BOT_TOKEN environment variable.');
     }
 
     const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
