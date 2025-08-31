@@ -5,7 +5,7 @@ import { addSong, getSongs, initDB } from '@/lib/db';
 import { categorizeSongsByGenre } from '@/ai/flows/categorize-songs-by-genre';
 import { getTelegramFile } from '@/ai/flows/get-telegram-file';
 import { sendTelegramMessage } from '@/ai/flows/send-telegram-message';
-import type { Song, SongGroup } from '@/types';
+import type { Song, SongGroup, StoredSong } from '@/types';
 import Player from './Player';
 import { SongList } from './SongList';
 import { FileUpload } from './FileUpload';
@@ -62,7 +62,7 @@ export default function TunePocketApp() {
     // Only pass plain strings to the server action.
     const { category, subCategory } = await categorizeSongsByGenre({ title, artist, genre });
     
-    const newSongData: Omit<Song, 'id' | 'localURL'> = {
+    const newSongData = {
       title,
       artist,
       genre,
@@ -173,8 +173,22 @@ export default function TunePocketApp() {
       try {
         await initDB();
         setProcessingMessage('Loading library...');
-        const storedSongs = await getSongs();
-        setSongs(storedSongs);
+        const storedSongs: StoredSong[] = await getSongs();
+        
+        const playableSongs: Song[] = storedSongs.map(song => {
+           const blob = new Blob([song.fileBlob], { type: 'audio/mpeg' });
+           const localURL = URL.createObjectURL(blob);
+           const artwork = song.artwork ? { data: new Uint8Array(song.artwork.data), format: song.artwork.format } : undefined;
+           
+           return {
+             ...song,
+             fileBlob: blob,
+             localURL,
+             artwork,
+           }
+        });
+        setSongs(playableSongs);
+
       } catch (error) {
         console.error('DB initialization or song loading failed', error);
         toast({ title: "Initialization Error", description: "Could not load the song library.", variant: "destructive" });

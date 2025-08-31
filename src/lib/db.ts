@@ -1,5 +1,5 @@
 'use client';
-import type { Song } from '@/types';
+import type { Song, StoredSong } from '@/types';
 
 const DB_NAME = 'MusicDB';
 const DB_VERSION = 1;
@@ -56,7 +56,7 @@ export const initDB = async (): Promise<boolean> => {
 }
 
 
-export const addSong = (song: Omit<Song, 'id' | 'localURL'>): Promise<number> => {
+export const addSong = (song: Omit<Song, 'id' | 'localURL' | 'fileBlob'> & {fileBlob: ArrayBuffer}): Promise<number> => {
   return new Promise(async (resolve, reject) => {
     try {
         const currentDb = await initDBInternal();
@@ -80,7 +80,7 @@ export const addSong = (song: Omit<Song, 'id' | 'localURL'>): Promise<number> =>
   });
 };
 
-export const getSongs = (): Promise<Song[]> => {
+export const getSongs = (): Promise<StoredSong[]> => {
   return new Promise(async (resolve, reject) => {
     try {
         const currentDb = await initDBInternal();
@@ -89,20 +89,8 @@ export const getSongs = (): Promise<Song[]> => {
         const request = store.getAll();
 
         request.onsuccess = () => {
-            const songsFromDb = request.result as (Omit<Song, 'fileBlob' | 'localURL'> & {fileBlob: ArrayBuffer})[];
-            
-            const songsWithValidUrls = songsFromDb.map(song => {
-                // Recreate the Blob from the ArrayBuffer for playback.
-                const blob = new Blob([song.fileBlob], { type: 'audio/mpeg' });
-                const localURL = URL.createObjectURL(blob);
-                
-                // Recreate the artwork buffer for the player. The stored format is already correct.
-                const artwork = song.artwork ? { data: song.artwork.data as any, format: song.artwork.format } : undefined;
-
-                return { ...song, fileBlob: blob, localURL, artwork };
-            });
-
-            resolve(songsWithValidUrls as Song[]);
+            const songsFromDb = request.result as StoredSong[];
+            resolve(songsFromDb);
         };
 
         request.onerror = () => {
