@@ -27,20 +27,29 @@ This will make the web application available, usually on `http://localhost:9002`
 
 In your second terminal, you need to run the Python script for the bot.
 
-First, ensure you have the necessary Python libraries installed. The dependencies are listed in `requirements.txt`. You can install them using pip:
+#### Environment Setup (Crucial Step)
 
-```bash
-pip install -r requirements.txt
-```
+Your development environment seems to be managed by Nix, which means standard Python installation methods (`pip`, `venv`) will not work correctly due to the `externally-managed-environment` error.
 
-**Note:** If you are in an environment managed by a tool like Nix, you may need to configure your environment to include the dependencies from `requirements.txt` instead of using `pip` directly.
+To run the Python bot, you must first ensure that Python and the required libraries are part of your environment configuration.
 
-Once the dependencies are installed, run the bot using the following command:
+1.  **Locate your Nix configuration file:** Find the file named `dev.nix` or `.replit` in your project's root directory.
+2.  **Add Python dependencies:** Edit this file to include the Python interpreter and the `python-telegram-bot` library. Add the following packages to the appropriate list in your configuration:
+    ```nix
+    pkgs.python311Full
+    pkgs.python311Packages.pip
+    pkgs.python311Packages.python-telegram-bot
+    ```
+3.  **Rebuild the environment:** Your environment should automatically rebuild after saving the file. If not, you may need to restart the development server or run a specific command for your platform.
+
+#### Running the Bot Script
+
+Once your environment is correctly configured, run the bot using the following command:
 
 ```bash
 npm run bot:run
 ```
-Alternatively, you can run the script directly:
+Alternatively, you can run the script directly. Start with `python3`:
 ```bash
 python3 bot.py
 ```
