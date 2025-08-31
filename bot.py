@@ -5,9 +5,9 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 
 # --- Configuration ---
 # IMPORTANT: Replace with your actual Bot Token from BotFather
-BOT_TOKEN = "YOUR_HTTP_API_TOKEN"
+BOT_TOKEN = "8317334769:AAHHl5uEcSbcvBjwXdnDXLmBuN41RMTC_w0"
 # IMPORTANT: Replace with your actual Mini App URL after deployment or during testing (e.g., ngrok URL)
-MINI_APP_URL = "https://your-mini-app-url.com"
+MINI_APP_URL = "https://3000-firebase-studio-1756580205727.cluster-64pjnskmlbaxowh5lzq6i7v4ra.cloudworkstations.dev/"
 # ---------------------
 
 # Enable logging

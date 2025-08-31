@@ -83,12 +83,20 @@ export const getSongs = (): Promise<Song[]> => {
         const request = store.getAll();
 
         request.onsuccess = () => {
-        resolve(request.result as Song[]);
+            const songs = request.result as Song[];
+            // Re-create local URLs as they are temporary
+            const songsWithValidUrls = songs.map(song => {
+                if (song.fileBlob) {
+                    song.localURL = URL.createObjectURL(song.fileBlob);
+                }
+                return song;
+            });
+            resolve(songsWithValidUrls);
         };
 
         request.onerror = () => {
-        console.error('Error getting songs', request.error);
-        reject(request.error);
+            console.error('Error getting songs', request.error);
+            reject(request.error);
         };
     } catch (error) {
         reject(error);
