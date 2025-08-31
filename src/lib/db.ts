@@ -58,15 +58,21 @@ export const addSong = (song: Omit<Song, 'id'>): Promise<number> => {
         const currentDb = await initDBInternal();
         const transaction = currentDb.transaction([STORE_NAME], 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
-        const request = store.add(song);
+        
+        // Convert Blob to ArrayBuffer before storing
+        const fileBlob = song.fileBlob as Blob;
+        const arrayBuffer = await fileBlob.arrayBuffer();
+        const storableSong = { ...song, fileBlob: arrayBuffer };
+        
+        const request = store.add(storableSong);
 
         request.onsuccess = () => {
-        resolve(request.result as number);
+            resolve(request.result as number);
         };
 
         request.onerror = () => {
-        console.error('Error adding song', request.error);
-        reject(request.error);
+            console.error('Error adding song', request.error);
+            reject(request.error);
         };
     } catch(error) {
         reject(error);
@@ -83,14 +89,18 @@ export const getSongs = (): Promise<Song[]> => {
         const request = store.getAll();
 
         request.onsuccess = () => {
-            const songs = request.result as Song[];
-            // Re-create local URLs as they are temporary
-            const songsWithValidUrls = songs.map(song => {
+            const songsFromDb = request.result as (Omit<Song, 'fileBlob'> & {fileBlob: ArrayBuffer})[];
+            
+            const songsWithValidUrls = songsFromDb.map(song => {
+                let localURL = '';
+                let fileBlob: Blob | null = null;
                 if (song.fileBlob) {
-                    song.localURL = URL.createObjectURL(song.fileBlob);
+                    fileBlob = new Blob([song.fileBlob], { type: 'audio/mpeg' });
+                    localURL = URL.createObjectURL(fileBlob);
                 }
-                return song;
-            });
+                return { ...song, fileBlob, localURL };
+            }) as Song[];
+
             resolve(songsWithValidUrls);
         };
 

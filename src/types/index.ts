@@ -7,7 +7,7 @@ export interface Song {
   genre: string;
   category: string;
   subCategory: string;
-  fileBlob: Blob;
+  fileBlob: Blob | ArrayBuffer; // Allow both for easier handling
   localURL: string;
   duration: number;
   artwork?: Iid3.IPicture;
