@@ -7,7 +7,6 @@
   packages = [
     pkgs.nodejs_20
     pkgs.zulu
-    # Adding Python and the required library for the Telegram bot
     pkgs.python311Full
     pkgs.python311Packages.pip
     pkgs.python311Packages.python-telegram-bot
