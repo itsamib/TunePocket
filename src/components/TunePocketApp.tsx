@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { addSong, getSongs, initDB } from '@/lib/db';
-import { categorizeSongsByGenre } from '@/ai/flows/categorize-songs-by-genre';
 import { getTelegramFile } from '@/ai/flows/get-telegram-file';
 import { sendTelegramMessage } from '@/ai/flows/send-telegram-message';
 import type { Song, SongGroup, StoredSong } from '@/types';
@@ -14,6 +13,7 @@ import { Loader2 } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
 import { Buffer } from 'buffer';
+import * as mmb from 'music-metadata-browser';
 
 
 export default function TunePocketApp() {
@@ -26,59 +26,67 @@ export default function TunePocketApp() {
   const [processingMessage, setProcessingMessage] = useState('Initializing...');
   const { toast } = useToast();
 
-  const processAndSaveSong = useCallback(async (file: Blob, defaultTitle: string): Promise<Song> => {
+  const processAndSaveSong = useCallback(async (file: Blob, defaultTitle: string): Promise<Song | null> => {
     if (file.size > 50 * 1024 * 1024) { // 50MB limit
         throw new Error("File is larger than 50MB limit.");
     }
     
     setProcessingMessage('Reading metadata...');
-    // Dynamically import the library and handle potential Buffer issues
-    const mmb = await import('music-metadata-browser');
-    if (typeof window !== 'undefined') {
+    
+    // Polyfill Buffer for music-metadata-browser in some environments
+    if (typeof window !== 'undefined' && typeof (window as any).Buffer === 'undefined') {
         (window as any).Buffer = Buffer;
     }
 
-    const fileArrayBuffer = await file.arrayBuffer();
-    const metadata = await mmb.parseBuffer(Buffer.from(fileArrayBuffer), file.type);
-    
-    const title = metadata.common.title || defaultTitle;
-    const artist = metadata.common.artist || 'Unknown Artist';
-    const genre = metadata.common.genre?.[0] || 'Unknown';
-    const duration = metadata.format.duration || 0;
-    const picture = metadata.common.picture?.[0];
-    
-    setProcessingMessage('Categorizing song...');
-    const { category, subCategory } = await categorizeSongsByGenre({ title, artist, genre });
-    
-    const artworkData = picture ? { data: picture.data.buffer as ArrayBuffer, format: picture.format } : undefined;
+    try {
+        const fileArrayBuffer = await file.arrayBuffer();
+        const metadata = await mmb.parseBuffer(Buffer.from(fileArrayBuffer), file.type);
+        
+        const title = metadata.common.title || defaultTitle;
+        const artist = metadata.common.artist || 'Unknown Artist';
+        const genre = metadata.common.genre?.[0] || 'Unknown';
+        const duration = metadata.format.duration || 0;
+        const picture = metadata.common.picture?.[0];
+        
+        setProcessingMessage('Categorizing song...');
+        // Simplified categorization without AI
+        const category = genre;
+        const subCategory = artist;
+        
+        const artworkData = picture ? { data: picture.data.buffer as ArrayBuffer, format: picture.format } : undefined;
 
-    const newSongData: Omit<StoredSong, 'id'> = {
-      title,
-      artist,
-      genre,
-      category,
-      subCategory,
-      fileBlob: fileArrayBuffer,
-      duration,
-      artwork: artworkData,
-    };
-    
-    setProcessingMessage('Saving to library...');
-    const newId = await addSong(newSongData);
-    
-    const playableBlob = new Blob([fileArrayBuffer], { type: file.type });
-    
-    const finalSong: Song = { 
-        id: newId,
-        ...newSongData,
-        fileBlob: playableBlob,
-        localURL: URL.createObjectURL(playableBlob),
-        artwork: picture,
-    };
-    
-    setSongs(prevSongs => [...prevSongs, finalSong]);
+        const newSongData: Omit<StoredSong, 'id'> = {
+          title,
+          artist,
+          genre,
+          category,
+          subCategory,
+          fileBlob: fileArrayBuffer,
+          duration,
+          artwork: artworkData,
+        };
+        
+        setProcessingMessage('Saving to library...');
+        const newId = await addSong(newSongData);
+        
+        const playableBlob = new Blob([fileArrayBuffer], { type: file.type });
+        
+        const finalSong: Song = { 
+            id: newId,
+            ...newSongData,
+            fileBlob: playableBlob,
+            localURL: URL.createObjectURL(playableBlob),
+            artwork: picture ? { data: new Uint8Array(artworkData!.data), format: artworkData!.format } : undefined,
+        };
+        
+        setSongs(prevSongs => [...prevSongs, finalSong]);
 
-    return finalSong;
+        return finalSong;
+
+    } catch (error) {
+        console.error("Failed to process and save song:", error);
+        throw error;
+    }
   }, []);
 
   const handleTelegramFile = useCallback(async (param: string) => {
@@ -102,13 +110,15 @@ export default function TunePocketApp() {
       
         const savedSong = await processAndSaveSong(blob, fileName);
       
-        toast({ title: "Song Added!", description: `\'\'\'${savedSong.title}\'\'\' by ${savedSong.artist} has been added.` });
-        
-        setProcessingMessage('Sending confirmation...');
-        await sendTelegramMessage({
-          chatId: chatId,
-          text: `✅ Song "\'\'\'${savedSong.title}\'\'\'" was successfully added to your TunePocket library!`,
-        });
+        if (savedSong) {
+            toast({ title: "Song Added!", description: `\'\'\'${savedSong.title}\'\'\' by ${savedSong.artist} has been added.` });
+            
+            setProcessingMessage('Sending confirmation...');
+            await sendTelegramMessage({
+              chatId: chatId,
+              text: `✅ Song "\'\'\'${savedSong.title}\'\'\'" was successfully added to your TunePocket library!`,
+            });
+        }
 
     } catch (error: any) {
         console.error("Error handling Telegram file:", error);
@@ -198,7 +208,9 @@ export default function TunePocketApp() {
     setProcessingMessage('Processing file...');
     try {
         const savedSong = await processAndSaveSong(file, file.name);
-        toast({ title: "Song Added!", description: `\'\'\'${savedSong.title}\'\'\' has been added.` });
+        if (savedSong) {
+            toast({ title: "Song Added!", description: `\'\'\'${savedSong.title}\'\'\' has been added.` });
+        }
     } catch (error: any) {
         console.error('Failed to process file', error);
         toast({ title: "Processing Failed", description: error.message || "Could not process the audio file.", variant: "destructive" });
