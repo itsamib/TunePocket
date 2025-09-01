@@ -48,3 +48,10 @@ export interface StoredPlaylist {
     name: string;
     songIds: number[];
 }
+
+// Settings Types
+export interface TabConfig {
+    id: 'songs' | 'playlists' | 'grouped' | 'artists' | 'albums';
+    name: string;
+    isVisible: boolean;
+}

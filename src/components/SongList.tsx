@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { Song, SongGroup, Playlist } from '@/types';
+import type { Song, SongGroup, Playlist, TabConfig } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Music, User, Library, PlayCircle, BarChartHorizontal, Disc, Pencil, ListMusic, Columns3, MoreVertical, PlusCircle, Trash2, FolderPlus } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
@@ -42,7 +42,16 @@ interface SongListProps {
   onDeletePlaylist: (playlistId: number) => void;
   onOpenAddSongsToPlaylist: (playlist: Playlist) => void;
   currentSong: Song | null;
+  tabConfig: TabConfig[];
 }
+
+const ICONS: { [key: string]: React.ElementType } = {
+    songs: Music,
+    playlists: ListMusic,
+    grouped: Columns3,
+    artists: User,
+    albums: Disc,
+};
 
 const SongListItem = ({ song, currentSong, onSelectSong, onEditSong, onOpenAddToPlaylist }: { song: Song; currentSong: Song | null; onSelectSong: (song: Song) => void; onEditSong: (song: Song) => void; onOpenAddToPlaylist: (song: Song) => void; }) => (
     <li className="flex items-center gap-2">
@@ -277,7 +286,7 @@ const PlaylistView = ({ playlists, songs, currentSong, onSelectSong, onEditSong,
 }
 
 
-export function SongList({ songs, groupedSongs, playlists, onSelectSong, onEditSong, onOpenAddToPlaylist, onCreatePlaylist, onDeletePlaylist, onOpenAddSongsToPlaylist, currentSong }: SongListProps) {
+export function SongList({ songs, groupedSongs, playlists, onSelectSong, onEditSong, onOpenAddToPlaylist, onCreatePlaylist, onDeletePlaylist, onOpenAddSongsToPlaylist, currentSong, tabConfig }: SongListProps) {
   
     if (songs.length === 0) {
         return (
@@ -288,17 +297,24 @@ export function SongList({ songs, groupedSongs, playlists, onSelectSong, onEditS
         )
     }
     
+    const visibleTabs = tabConfig.filter(tab => tab.isVisible);
+    const defaultTab = visibleTabs.length > 0 ? visibleTabs[0].id : "";
+
     return (
         <div>
             <h2 className="text-2xl font-headline font-bold mb-4 flex items-center gap-2"><Library /> My Library</h2>
             
-            <Tabs defaultValue="songs" className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
-                    <TabsTrigger value="songs"><Music className="w-4 h-4 mr-2"/>Songs</TabsTrigger>
-                    <TabsTrigger value="playlists"><ListMusic className="w-4 h-4 mr-2"/>Playlists</TabsTrigger>
-                    <TabsTrigger value="grouped"><Columns3 className="w-4 h-4 mr-2"/>Genres</TabsTrigger>
-                    <TabsTrigger value="artists"><User className="w-4 h-4 mr-2"/>Artists</TabsTrigger>
-                    <TabsTrigger value="albums"><Disc className="w-4 h-4 mr-2"/>Albums</TabsTrigger>
+            <Tabs defaultValue={defaultTab} className="w-full">
+                <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${visibleTabs.length}, 1fr)`}}>
+                    {visibleTabs.map(tab => {
+                        const Icon = ICONS[tab.id];
+                        return (
+                             <TabsTrigger key={tab.id} value={tab.id}>
+                                <Icon className="w-4 h-4 mr-2"/>
+                                {tab.name}
+                            </TabsTrigger>
+                        )
+                    })}
                 </TabsList>
                 <TabsContent value="songs" className="mt-4">
                      <ul className="space-y-1">

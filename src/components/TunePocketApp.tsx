@@ -4,19 +4,28 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { addSong, getSongs, initDB, updateSong, getPlaylists, addPlaylist, updatePlaylistSongs, deletePlaylist } from '@/lib/db';
 import { getTelegramFile } from '@/ai/flows/get-telegram-file';
 import { sendTelegramMessage } from '@/ai/flows/send-telegram-message';
-import type { Song, SongGroup, StoredSong, EditableSongData, Playlist } from '@/types';
+import type { Song, SongGroup, StoredSong, EditableSongData, Playlist, TabConfig } from '@/types';
 import Player from './Player';
 import { SongList } from './SongList';
 import { EditSongDialog } from './EditSongDialog';
 import { AddToPlaylistDialog } from './AddToPlaylistDialog';
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2, Plus, Menu } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { Button } from './ui/button';
 import { Buffer } from 'buffer';
 import * as mmb from 'music-metadata-browser';
 import { AddSongsToPlaylistDialog } from './AddSongsToPlaylistDialog';
+import { SettingsSheet } from './SettingsSheet';
 
+
+const DEFAULT_TABS: TabConfig[] = [
+    { id: 'songs', name: 'Songs', isVisible: true },
+    { id: 'playlists', name: 'Playlists', isVisible: true },
+    { id: 'grouped', name: 'Genres', isVisible: true },
+    { id: 'artists', name: 'Artists', isVisible: true },
+    { id: 'albums', name: 'Albums', isVisible: true },
+];
 
 export default function TunePocketApp() {
   const [tg, setTg] = useState<any>(null);
@@ -34,6 +43,8 @@ export default function TunePocketApp() {
   const [repeatMode, setRepeatMode] = useState<'none' | 'one' | 'all'>('none');
   const [shuffledQueue, setShuffledQueue] = useState<Song[]>([]);
   const [originalQueue, setOriginalQueue] = useState<Song[]>([]);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [tabConfig, setTabConfig] = useState<TabConfig[]>([]);
 
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -175,6 +186,15 @@ export default function TunePocketApp() {
       
       try {
         await initDB();
+        
+        // Load Tab Configuration
+        const savedTabs = localStorage.getItem('tunePocketTabConfig');
+        if (savedTabs) {
+            setTabConfig(JSON.parse(savedTabs));
+        } else {
+            setTabConfig(DEFAULT_TABS);
+        }
+
         setProcessingMessage('Loading library...');
         const storedSongs: StoredSong[] = await getSongs();
         
@@ -416,6 +436,12 @@ export default function TunePocketApp() {
     setIsPlaying(true);
   }, [currentSong, songs.length, isShuffle, shuffledQueue, originalQueue]);
   
+  const handleUpdateTabConfig = (newConfig: TabConfig[]) => {
+      setTabConfig(newConfig);
+      localStorage.setItem('tunePocketTabConfig', JSON.stringify(newConfig));
+      toast({ title: 'Settings Saved', description: 'Your tab settings have been updated.'})
+  }
+
   useEffect(() => {
     setOriginalQueue(songs);
     if(isShuffle) {
@@ -473,8 +499,12 @@ export default function TunePocketApp() {
 
   return (
     <div className="h-screen w-screen flex flex-col bg-background text-foreground">
-       <header className="p-4 border-b">
-         <h1 className="text-2xl font-headline text-primary text-center">TunePocket</h1>
+       <header className="p-2 border-b flex items-center justify-between">
+         <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)}>
+            <Menu />
+         </Button>
+         <h1 className="text-2xl font-headline text-primary">TunePocket</h1>
+         <div className="w-10"></div>
        </header>
        <main className="flex-grow overflow-hidden">
         <ScrollArea className="h-full">
@@ -490,6 +520,7 @@ export default function TunePocketApp() {
                   onDeletePlaylist={handleDeletePlaylist}
                   onOpenAddSongsToPlaylist={handleOpenAddSongsToPlaylist}
                   currentSong={currentSong} 
+                  tabConfig={tabConfig}
                 />
             </div>
         </ScrollArea>
@@ -513,6 +544,12 @@ export default function TunePocketApp() {
         allSongs={songs}
         onClose={() => setPlaylistToEdit(null)}
         onConfirm={handleConfirmAddSongsToPlaylist}
+      />
+       <SettingsSheet
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        tabConfig={tabConfig}
+        onTabConfigChange={handleUpdateTabConfig}
       />
       <input 
         type="file" 
