@@ -51,6 +51,18 @@ export default function TunePocketApp() {
         const title = metadata.common.title || defaultTitle;
         const artist = metadata.common.artist || 'Unknown Artist';
         const album = metadata.common.album || 'Unknown Album';
+
+        // Check for duplicates before proceeding
+        const isDuplicate = songs.some(song => 
+            song.title.toLowerCase() === title.toLowerCase() &&
+            song.artist.toLowerCase() === artist.toLowerCase() &&
+            song.album.toLowerCase() === album.toLowerCase()
+        );
+
+        if (isDuplicate) {
+            throw new Error(`Song "${title}" by ${artist} already exists in your library.`);
+        }
+
         const genre = metadata.common.genre?.[0] || 'Unknown Genre';
         const duration = metadata.format.duration || 0;
         const picture = metadata.common.picture?.[0];
@@ -94,7 +106,7 @@ export default function TunePocketApp() {
         console.error("Failed to process and save song:", error);
         throw error;
     }
-  }, []);
+  }, [songs]); // Added songs dependency for duplicate check
 
   const handleTelegramFile = useCallback(async (param: string) => {
     setIsLoading(true);
