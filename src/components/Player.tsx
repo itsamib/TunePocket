@@ -4,10 +4,11 @@ import type { Song } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Music, Loader2, Wifi, WifiOff } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Music, Loader2, Wifi, WifiOff, Shuffle, Repeat, Repeat1 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { Badge } from './ui/badge';
+import { cn } from '@/lib/utils';
 
 interface PlayerProps {
   currentSong: Song | null;
@@ -17,9 +18,25 @@ interface PlayerProps {
   onPrev: () => void;
   isLoading: boolean;
   telegramUser: any;
+  isShuffle: boolean;
+  onToggleShuffle: () => void;
+  repeatMode: 'none' | 'one' | 'all';
+  onCycleRepeatMode: () => void;
 }
 
-export default function Player({ currentSong, isPlaying, onPlayPause, onNext, onPrev, isLoading, telegramUser }: PlayerProps) {
+export default function Player({ 
+    currentSong, 
+    isPlaying, 
+    onPlayPause, 
+    onNext, 
+    onPrev, 
+    isLoading, 
+    telegramUser,
+    isShuffle,
+    onToggleShuffle,
+    repeatMode,
+    onCycleRepeatMode
+}: PlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [progress, setProgress] = useState(0);
   const [volume, setVolume] = useState(0.75);
@@ -64,7 +81,9 @@ export default function Player({ currentSong, isPlaying, onPlayPause, onNext, on
 
   const handleSeek = (value: number[]) => {
     if (audioRef.current && currentSong) {
-      audioRef.current.currentTime = (value[0] / 100) * currentSong.duration;
+      const newTime = (value[0] / 100) * currentSong.duration;
+      audioRef.current.currentTime = newTime;
+      setProgress(value[0]);
     }
   };
   
@@ -74,6 +93,7 @@ export default function Player({ currentSong, isPlaying, onPlayPause, onNext, on
   }
 
   const formatTime = (seconds: number) => {
+    if (isNaN(seconds) || seconds < 0) return '0:00';
     const minutes = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
@@ -81,6 +101,17 @@ export default function Player({ currentSong, isPlaying, onPlayPause, onNext, on
 
   const currentTime = audioRef.current?.currentTime ?? 0;
   const duration = currentSong?.duration ?? 0;
+
+  const renderRepeatIcon = () => {
+    switch (repeatMode) {
+      case 'one':
+        return <Repeat1 className="text-primary" />;
+      case 'all':
+        return <Repeat className="text-primary" />;
+      default:
+        return <Repeat />;
+    }
+  };
 
   return (
     <>
@@ -94,6 +125,7 @@ export default function Player({ currentSong, isPlaying, onPlayPause, onNext, on
             }
         }}
         onEnded={onNext}
+        loop={repeatMode === 'one'}
       />
       <Card className="fixed bottom-0 left-0 right-0 z-50 rounded-t-lg rounded-b-none border-t border-x-0 border-b-0 shadow-2xl">
         <CardContent className="p-4 flex items-center gap-4">
@@ -112,7 +144,10 @@ export default function Player({ currentSong, isPlaying, onPlayPause, onNext, on
           </div>
           
           <div className="flex flex-col items-center gap-2 flex-grow">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <Button variant="ghost" size="icon" onClick={onToggleShuffle} className={cn(isShuffle && 'text-primary')}>
+                <Shuffle />
+              </Button>
               <Button variant="ghost" size="icon" onClick={onPrev} disabled={!currentSong}>
                 <SkipBack />
               </Button>
@@ -121,6 +156,9 @@ export default function Player({ currentSong, isPlaying, onPlayPause, onNext, on
               </Button>
               <Button variant="ghost" size="icon" onClick={onNext} disabled={!currentSong}>
                 <SkipForward />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={onCycleRepeatMode}>
+                {renderRepeatIcon()}
               </Button>
             </div>
             <div className="w-full flex items-center gap-2 text-xs max-w-xs">

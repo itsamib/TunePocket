@@ -30,6 +30,11 @@ export default function TunePocketApp() {
   const [editingSong, setEditingSong] = useState<Song | null>(null);
   const [songToAddToPlaylist, setSongToAddToPlaylist] = useState<Song | null>(null);
   const [playlistToEdit, setPlaylistToEdit] = useState<Playlist | null>(null);
+  const [isShuffle, setIsShuffle] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<'none' | 'one' | 'all'>('none');
+  const [shuffledQueue, setShuffledQueue] = useState<Song[]>([]);
+  const [originalQueue, setOriginalQueue] = useState<Song[]>([]);
+
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -187,6 +192,8 @@ export default function TunePocketApp() {
            }
         }).sort((a, b) => a.title.localeCompare(b.title));
         setSongs(playableSongs);
+        setOriginalQueue(playableSongs);
+
 
         setProcessingMessage('Loading playlists...');
         const storedPlaylists = await getPlaylists();
@@ -358,21 +365,63 @@ export default function TunePocketApp() {
     setPlaylistToEdit(playlist);
   }
 
+  const handleToggleShuffle = useCallback(() => {
+    setIsShuffle(prev => {
+        const newShuffleState = !prev;
+        if (newShuffleState) {
+            const newShuffledQueue = [...originalQueue].sort(() => Math.random() - 0.5);
+            setShuffledQueue(newShuffledQueue);
+        }
+        return newShuffleState;
+    });
+  }, [originalQueue]);
+
+  const handleCycleRepeatMode = () => {
+    setRepeatMode(prev => {
+        if (prev === 'none') return 'all';
+        if (prev === 'all') return 'one';
+        return 'none';
+    });
+  };
+
   const playNext = useCallback(() => {
     if (!currentSong || songs.length === 0) return;
-    const currentIndex = songs.findIndex(s => s.id === currentSong.id);
-    const nextIndex = (currentIndex + 1) % songs.length;
-    setCurrentSong(songs[nextIndex]);
+
+    const queue = isShuffle ? shuffledQueue : originalQueue;
+    const currentIndex = queue.findIndex(s => s.id === currentSong.id);
+    let nextIndex = currentIndex + 1;
+    
+    if (nextIndex >= queue.length) {
+        if (repeatMode === 'all') {
+            nextIndex = 0; // Loop back to the start
+        } else {
+            // Stop playing if not repeating
+            setIsPlaying(false);
+            return;
+        }
+    }
+
+    setCurrentSong(queue[nextIndex]);
     setIsPlaying(true);
-  }, [currentSong, songs]);
+  }, [currentSong, songs.length, isShuffle, shuffledQueue, originalQueue, repeatMode]);
 
   const playPrev = useCallback(() => {
     if (!currentSong || songs.length === 0) return;
-    const currentIndex = songs.findIndex(s => s.id === currentSong.id);
-    const prevIndex = (currentIndex - 1 + songs.length) % songs.length;
-    setCurrentSong(songs[prevIndex]);
+    
+    const queue = isShuffle ? shuffledQueue : originalQueue;
+    const currentIndex = queue.findIndex(s => s.id === currentSong.id);
+    const prevIndex = (currentIndex - 1 + queue.length) % queue.length;
+    
+    setCurrentSong(queue[prevIndex]);
     setIsPlaying(true);
-  }, [currentSong, songs]);
+  }, [currentSong, songs.length, isShuffle, shuffledQueue, originalQueue]);
+  
+  useEffect(() => {
+    setOriginalQueue(songs);
+    if(isShuffle) {
+        setShuffledQueue([...songs].sort(() => Math.random() - 0.5));
+    }
+  }, [songs, isShuffle]);
 
   const groupedSongs = useMemo(() => {
     return songs.reduce<SongGroup>((acc, song) => {
@@ -489,6 +538,10 @@ export default function TunePocketApp() {
         onPrev={playPrev}
         isLoading={isLoading && !!processingMessage}
         telegramUser={user}
+        isShuffle={isShuffle}
+        onToggleShuffle={handleToggleShuffle}
+        repeatMode={repeatMode}
+        onCycleRepeatMode={handleCycleRepeatMode}
       />
     </div>
   );
