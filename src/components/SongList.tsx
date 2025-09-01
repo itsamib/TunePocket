@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { Song, SongGroup, Playlist } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Music, User, Library, PlayCircle, BarChartHorizontal, Disc, Pencil, ListMusic, Columns3, MoreVertical, PlusCircle, Trash2 } from 'lucide-react';
+import { Music, User, Library, PlayCircle, BarChartHorizontal, Disc, Pencil, ListMusic, Columns3, MoreVertical, PlusCircle, Trash2, FolderPlus } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from './ui/scroll-area';
@@ -33,6 +33,7 @@ interface SongListProps {
   onOpenAddToPlaylist: (song: Song) => void;
   onCreatePlaylist: () => void;
   onDeletePlaylist: (playlistId: number) => void;
+  onOpenAddSongsToPlaylist: (playlist: Playlist) => void;
   currentSong: Song | null;
 }
 
@@ -172,7 +173,7 @@ const GroupedList = ({ groupedSongs, onSelectSong, onEditSong, onOpenAddToPlayli
     </Accordion>
 );
 
-const PlaylistView = ({ playlists, songs, currentSong, onSelectSong, onEditSong, onOpenAddToPlaylist, onCreatePlaylist, onDeletePlaylist }: Pick<SongListProps, 'playlists' | 'songs' | 'currentSong' | 'onSelectSong' | 'onEditSong' | 'onOpenAddToPlaylist' | 'onCreatePlaylist' | 'onDeletePlaylist'>) => {
+const PlaylistView = ({ playlists, songs, currentSong, onSelectSong, onEditSong, onOpenAddToPlaylist, onCreatePlaylist, onDeletePlaylist, onOpenAddSongsToPlaylist }: Pick<SongListProps, 'playlists' | 'songs' | 'currentSong' | 'onSelectSong' | 'onEditSong' | 'onOpenAddToPlaylist' | 'onCreatePlaylist' | 'onDeletePlaylist' | 'onOpenAddSongsToPlaylist'>) => {
     const [isAlertOpen, setIsAlertOpen] = useState(false);
     const [playlistToDelete, setPlaylistToDelete] = useState<number | null>(null);
 
@@ -206,7 +207,10 @@ const PlaylistView = ({ playlists, songs, currentSong, onSelectSong, onEditSong,
                                 </div>
                             </AccordionTrigger>
                             <AccordionContent>
-                                <div className="flex justify-end mb-2">
+                                <div className="flex justify-end gap-2 mb-2">
+                                    <Button variant="outline" size="sm" onClick={() => onOpenAddSongsToPlaylist(playlist)}>
+                                        <FolderPlus className="mr-2 h-4 w-4" /> Add Songs
+                                    </Button>
                                     <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(playlist.id)}>
                                         <Trash2 className="mr-2 h-4 w-4" /> Delete Playlist
                                     </Button>
@@ -219,7 +223,7 @@ const PlaylistView = ({ playlists, songs, currentSong, onSelectSong, onEditSong,
                                         })}
                                     </ul>
                                 ) : (
-                                    <p className="text-sm text-muted-foreground pl-4 pt-2">This playlist is empty. Add songs using the '...' menu.</p>
+                                    <p className="text-sm text-muted-foreground pl-4 pt-2">This playlist is empty. Click &quot;Add Songs&quot; to get started.</p>
                                 )}
                             </AccordionContent>
                         </AccordionItem>
@@ -250,7 +254,7 @@ const PlaylistView = ({ playlists, songs, currentSong, onSelectSong, onEditSong,
 }
 
 
-export function SongList({ songs, groupedSongs, playlists, onSelectSong, onEditSong, onOpenAddToPlaylist, onCreatePlaylist, onDeletePlaylist, currentSong }: SongListProps) {
+export function SongList({ songs, groupedSongs, playlists, onSelectSong, onEditSong, onOpenAddToPlaylist, onCreatePlaylist, onDeletePlaylist, onOpenAddSongsToPlaylist, currentSong }: SongListProps) {
   
     if (songs.length === 0) {
         return (
@@ -290,6 +294,7 @@ export function SongList({ songs, groupedSongs, playlists, onSelectSong, onEditS
                         onOpenAddToPlaylist={onOpenAddToPlaylist}
                         onCreatePlaylist={onCreatePlaylist}
                         onDeletePlaylist={onDeletePlaylist}
+                        onOpenAddSongsToPlaylist={onOpenAddSongsToPlaylist}
                     />
                 </TabsContent>
                 <TabsContent value="grouped" className="mt-4">

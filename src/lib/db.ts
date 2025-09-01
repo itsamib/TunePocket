@@ -157,7 +157,7 @@ export const getPlaylists = (): Promise<Playlist[]> => {
     });
 };
 
-export const updatePlaylistSongs = (playlistId: number, songId: number): Promise<Playlist | null> => {
+export const updatePlaylistSongs = (playlistId: number, songIdsToAdd: number[]): Promise<Playlist | null> => {
     return new Promise(async (resolve, reject) => {
         try {
             const currentDb = await initDBInternal();
@@ -170,11 +170,14 @@ export const updatePlaylistSongs = (playlistId: number, songId: number): Promise
                 const playlist = getRequest.result as StoredPlaylist;
                 if (!playlist) return reject(new Error('Playlist not found'));
 
-                if (playlist.songIds.includes(songId)) {
-                    return resolve(null); // Indicate song already exists
+                const existingSongIds = new Set(playlist.songIds);
+                const newSongIds = songIdsToAdd.filter(id => !existingSongIds.has(id));
+
+                if (newSongIds.length === 0) {
+                    return resolve(null); // Indicate no new songs were added
                 }
 
-                playlist.songIds.push(songId);
+                playlist.songIds.push(...newSongIds);
                 const updateRequest = store.put(playlist);
 
                 updateRequest.onsuccess = () => resolve(playlist);

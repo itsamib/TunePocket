@@ -16,6 +16,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
 import { Buffer } from 'buffer';
 import * as mmb from 'music-metadata-browser';
+import { AddSongsToPlaylistDialog } from './AddSongsToPlaylistDialog';
 
 
 export default function TunePocketApp() {
@@ -29,6 +30,7 @@ export default function TunePocketApp() {
   const [processingMessage, setProcessingMessage] = useState('Initializing...');
   const [editingSong, setEditingSong] = useState<Song | null>(null);
   const [songToAddToPlaylist, setSongToAddToPlaylist] = useState<Song | null>(null);
+  const [playlistToEdit, setPlaylistToEdit] = useState<Playlist | null>(null);
   const { toast } = useToast();
 
   const processAndSaveSong = useCallback(async (file: Blob, defaultTitle: string): Promise<Song | null> => {
@@ -277,7 +279,7 @@ export default function TunePocketApp() {
   const handleAddSongToPlaylist = useCallback(async (playlistId: number) => {
     if (!songToAddToPlaylist) return;
     try {
-        const updatedPlaylist = await updatePlaylistSongs(playlistId, songToAddToPlaylist.id);
+        const updatedPlaylist = await updatePlaylistSongs(playlistId, [songToAddToPlaylist.id]);
         if (updatedPlaylist) {
             setPlaylists(prev => prev.map(p => p.id === playlistId ? updatedPlaylist : p));
             toast({ title: "Song Added", description: `Added to '${updatedPlaylist.name}'.` });
@@ -289,6 +291,21 @@ export default function TunePocketApp() {
         toast({ title: "Error", description: "Could not add the song to the playlist.", variant: "destructive" });
     }
   }, [songToAddToPlaylist, toast]);
+  
+  const handleConfirmAddSongsToPlaylist = useCallback(async (playlistId: number, songIds: number[]) => {
+    if (songIds.length === 0) return;
+    try {
+        const updatedPlaylist = await updatePlaylistSongs(playlistId, songIds);
+        if (updatedPlaylist) {
+             setPlaylists(prev => prev.map(p => p.id === playlistId ? updatedPlaylist : p));
+             toast({ title: "Playlist Updated", description: `${songIds.length} song(s) added to '${updatedPlaylist.name}'.` });
+        }
+    } catch (error) {
+        console.error("Failed to add songs to playlist", error);
+        toast({ title: "Error", description: "Could not add the selected songs.", variant: "destructive" });
+    }
+    setPlaylistToEdit(null);
+  }, [toast]);
 
 
   const handlePlayPause = () => {
@@ -308,6 +325,10 @@ export default function TunePocketApp() {
   
   const handleOpenAddToPlaylist = (song: Song) => {
     setSongToAddToPlaylist(song);
+  }
+
+  const handleOpenAddSongsToPlaylist = (playlist: Playlist) => {
+    setPlaylistToEdit(playlist);
   }
 
   const playNext = useCallback(() => {
@@ -391,6 +412,7 @@ export default function TunePocketApp() {
                   onOpenAddToPlaylist={handleOpenAddToPlaylist}
                   onCreatePlaylist={handleCreatePlaylist}
                   onDeletePlaylist={handleDeletePlaylist}
+                  onOpenAddSongsToPlaylist={handleOpenAddSongsToPlaylist}
                   currentSong={currentSong} 
                 />
                 <Separator />
@@ -413,6 +435,13 @@ export default function TunePocketApp() {
         song={songToAddToPlaylist}
         playlists={playlists}
         onSelectPlaylist={handleAddSongToPlaylist}
+      />
+      <AddSongsToPlaylistDialog
+        isOpen={!!playlistToEdit}
+        playlist={playlistToEdit}
+        allSongs={songs}
+        onClose={() => setPlaylistToEdit(null)}
+        onConfirm={handleConfirmAddSongsToPlaylist}
       />
       <div className="pb-36" /> {/* Spacer for player */}
       <Player 
