@@ -6,13 +6,13 @@ export interface Song {
   id: number;
   title: string;
   artist: string;
+  album: string;
   genre: string;
-  category: string;
-  subCategory: string;
   fileBlob: Blob; // Used for playback
   localURL: string;
   duration: number;
   artwork?: Iid3.IPicture; // This is a complex object, suitable for client-side only
+  contentType: string;
 }
 
 // This interface represents the actual data structure stored in IndexedDB.
@@ -22,19 +22,21 @@ export interface StoredSong {
   id: number;
   title: string;
   artist: string;
+  album: string;
   genre: string;
-  category: string;
-  subCategory: string;
   fileBlob: ArrayBuffer; // Stored as ArrayBuffer
   duration: number;
   artwork?: { // Artwork is stored as a plain object
     data: ArrayBuffer;
     format: string;
   };
+  contentType: string;
 }
 
 export type SongGroup = {
   [genre: string]: {
-    [artist:string]: Song[];
+    [artist: string]: {
+      [album: string]: Song[];
+    }
   };
 };

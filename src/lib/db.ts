@@ -56,7 +56,7 @@ export const initDB = async (): Promise<boolean> => {
 }
 
 
-export const addSong = (song: Omit<Song, 'id' | 'localURL' | 'fileBlob'> & {fileBlob: ArrayBuffer}): Promise<number> => {
+export const addSong = (song: Omit<StoredSong, 'id'>): Promise<number> => {
   return new Promise(async (resolve, reject) => {
     try {
         const currentDb = await initDBInternal();

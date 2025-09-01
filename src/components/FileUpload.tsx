@@ -27,13 +27,13 @@ export function FileUpload({ onFileSelect, isLoading }: FileUploadProps) {
                     <UploadCloud className="text-primary"/> Add a Song
                 </CardTitle>
                 <CardDescription>
-                    Upload an MP3 file from your device to add it to your TunePocket library.
+                    Upload an audio file from your device to add it to your TunePocket library.
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="grid w-full max-w-sm items-center gap-1.5">
                     <Label htmlFor="audio-file" className="sr-only">Upload Song</Label>
-                    <Input id="audio-file" type="file" accept="audio/mpeg" onChange={handleFileChange} disabled={isLoading} className="file:text-primary-foreground file:font-bold"/>
+                    <Input id="audio-file" type="file" accept="audio/*" onChange={handleFileChange} disabled={isLoading} className="file:text-primary-foreground file:font-bold"/>
                 </div>
                  <p className="text-xs text-muted-foreground mt-4">Or, send an audio file to the TunePocket bot in Telegram.</p>
             </CardContent>

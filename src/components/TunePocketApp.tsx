@@ -44,39 +44,40 @@ export default function TunePocketApp() {
         
         const title = metadata.common.title || defaultTitle;
         const artist = metadata.common.artist || 'Unknown Artist';
-        const genre = metadata.common.genre?.[0] || 'Unknown';
+        const album = metadata.common.album || 'Unknown Album';
+        const genre = metadata.common.genre?.[0] || 'Unknown Genre';
         const duration = metadata.format.duration || 0;
         const picture = metadata.common.picture?.[0];
         
-        setProcessingMessage('Categorizing song...');
-        // Simplified categorization without AI
-        const category = genre;
-        const subCategory = artist;
-        
+        setProcessingMessage('Saving to library...');
         const artworkData = picture ? { data: picture.data.buffer as ArrayBuffer, format: picture.format } : undefined;
 
         const newSongData: Omit<StoredSong, 'id'> = {
           title,
           artist,
+          album,
           genre,
-          category,
-          subCategory,
           fileBlob: fileArrayBuffer,
           duration,
           artwork: artworkData,
+          contentType: file.type || 'audio/mpeg',
         };
         
-        setProcessingMessage('Saving to library...');
         const newId = await addSong(newSongData);
         
-        const playableBlob = new Blob([fileArrayBuffer], { type: file.type });
+        const playableBlob = new Blob([fileArrayBuffer], { type: newSongData.contentType });
         
         const finalSong: Song = { 
             id: newId,
-            ...newSongData,
+            title,
+            artist,
+            album,
+            genre,
             fileBlob: playableBlob,
             localURL: URL.createObjectURL(playableBlob),
             artwork: picture ? { data: new Uint8Array(artworkData!.data), format: artworkData!.format } : undefined,
+            duration,
+            contentType: newSongData.contentType,
         };
         
         setSongs(prevSongs => [...prevSongs, finalSong]);
@@ -155,7 +156,7 @@ export default function TunePocketApp() {
         const storedSongs: StoredSong[] = await getSongs();
         
         const playableSongs: Song[] = storedSongs.map(song => {
-           const blob = new Blob([song.fileBlob], { type: 'audio/mpeg' });
+           const blob = new Blob([song.fileBlob], { type: song.contentType });
            const localURL = URL.createObjectURL(blob);
            const artwork = song.artwork ? { data: new Uint8Array(song.artwork.data), format: song.artwork.format } : undefined;
            
@@ -249,14 +250,17 @@ export default function TunePocketApp() {
 
   const groupedSongs = useMemo(() => {
     return songs.reduce<SongGroup>((acc, song) => {
-      const { category, artist } = song;
-      if (!acc[category]) {
-        acc[category] = {};
+      const { genre, artist, album } = song;
+      if (!acc[genre]) {
+        acc[genre] = {};
       }
-      if (!acc[category][artist]) {
-        acc[category][artist] = [];
+      if (!acc[genre][artist]) {
+        acc[genre][artist] = {};
       }
-      acc[category][artist].push(song);
+      if (!acc[genre][artist][album]) {
+        acc[genre][artist][album] = [];
+      }
+      acc[genre][artist][album].push(song);
       return acc;
     }, {});
   }, [songs]);

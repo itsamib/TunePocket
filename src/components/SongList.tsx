@@ -2,7 +2,8 @@
 
 import { Song, SongGroup } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Music, User, Library, PlayCircle, BarChartHorizontal } from 'lucide-react';
+import { Music, User, Library, PlayCircle, BarChartHorizontal, Disc } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 
 interface SongListProps {
   groupedSongs: SongGroup;
@@ -22,43 +23,56 @@ export function SongList({ groupedSongs, onSelectSong, currentSong }: SongListPr
     
   return (
     <div>
-        <h2 className="text-2xl font-headline font-bold mb-4 flex items-center gap-2"><Library /> My Library</h2>
-        <div className="space-y-4">
-          {Object.keys(groupedSongs).sort().map(category => (
-            <div key={category} className="space-y-2">
-              <h3 className="font-headline text-lg flex items-center gap-2 text-primary">
-                  <Music className="w-5 h-5"/> {category}
-              </h3>
-              <div className="pl-4 space-y-2">
-                {Object.keys(groupedSongs[category]).sort().map(artist => (
-                    <div key={`${category}-${artist}`}>
-                        <h4 className="font-semibold flex items-center gap-2 text-accent">
-                            <User className="w-4 h-4" /> {artist}
-                        </h4>
-                        <ul className="space-y-1 pt-2 pl-4">
-                          {groupedSongs[category][artist].map(song => (
-                            <li key={song.id}>
-                              <Button
-                                variant={currentSong?.id === song.id ? "secondary" : "ghost"}
-                                className={`w-full justify-start h-auto py-2 ${currentSong?.id === song.id ? 'font-bold' : ''}`}
-                                onClick={() => onSelectSong(song)}
-                              >
-                                {currentSong?.id === song.id ? (
-                                  <BarChartHorizontal className="w-4 h-4 mr-2 text-primary animate-pulse" />
-                                ) : (
-                                  <PlayCircle className="w-4 h-4 mr-2" />
-                                )}
-                                <span className="truncate">{song.title}</span>
-                              </Button>
-                            </li>
-                          ))}
-                        </ul>
-                    </div>
+      <h2 className="text-2xl font-headline font-bold mb-4 flex items-center gap-2"><Library /> My Library</h2>
+      <Accordion type="multiple" className="w-full">
+        {Object.keys(groupedSongs).sort().map(genre => (
+          <AccordionItem value={genre} key={genre}>
+            <AccordionTrigger className="font-headline text-lg flex items-center gap-2 text-primary hover:no-underline">
+              <Music className="w-5 h-5"/> {genre}
+            </AccordionTrigger>
+            <AccordionContent>
+              <Accordion type="multiple" className="w-full pl-4">
+                {Object.keys(groupedSongs[genre]).sort().map(artist => (
+                  <AccordionItem value={`${genre}-${artist}`} key={`${genre}-${artist}`}>
+                     <AccordionTrigger className="font-semibold flex items-center gap-2 text-accent hover:no-underline">
+                       <User className="w-4 h-4" /> {artist}
+                     </AccordionTrigger>
+                     <AccordionContent>
+                      <div className="pl-4 space-y-2">
+                        {Object.keys(groupedSongs[genre][artist]).sort().map(album => (
+                           <div key={`${genre}-${artist}-${album}`}>
+                                <h5 className="font-semibold flex items-center gap-2 text-muted-foreground mb-2">
+                                    <Disc className="w-4 h-4" /> {album}
+                                </h5>
+                                <ul className="space-y-1 pt-1 pl-4">
+                                  {groupedSongs[genre][artist][album].map(song => (
+                                    <li key={song.id}>
+                                      <Button
+                                        variant={currentSong?.id === song.id ? "secondary" : "ghost"}
+                                        className={`w-full justify-start h-auto py-2 ${currentSong?.id === song.id ? 'font-bold' : ''}`}
+                                        onClick={() => onSelectSong(song)}
+                                      >
+                                        {currentSong?.id === song.id ? (
+                                          <BarChartHorizontal className="w-4 h-4 mr-2 text-primary animate-pulse" />
+                                        ) : (
+                                          <PlayCircle className="w-4 h-4 mr-2" />
+                                        )}
+                                        <span className="truncate">{song.title}</span>
+                                      </Button>
+                                    </li>
+                                  ))}
+                                </ul>
+                           </div>
+                        ))}
+                      </div>
+                     </AccordionContent>
+                  </AccordionItem>
                 ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+              </Accordion>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </div>
   );
 }
