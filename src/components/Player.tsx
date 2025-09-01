@@ -204,7 +204,7 @@ export default function Player({
               </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full max-w-xs mx-auto shrink-0 pb-4">
+          <div className="flex items-center gap-2 w-full max-w-xs mx-auto shrink-0 mt-auto pb-4">
               <Button variant="ghost" size="icon" onClick={() => setIsMuted(!isMuted)}>
                   {isMuted || volume === 0 ? <VolumeX /> : <Volume2 />}
               </Button>
