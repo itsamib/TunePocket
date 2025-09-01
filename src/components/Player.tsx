@@ -3,7 +3,7 @@
 import type { Song } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from '@/components/ui/sheet';
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Music, Loader2, Shuffle, Repeat, Repeat1 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
@@ -151,6 +151,10 @@ export default function Player({
             </div>
         </SheetTrigger>
         <SheetContent side="bottom" className="h-[90vh] p-4 flex flex-col items-center justify-between gap-6 border-none bg-gradient-to-b from-primary/20 via-background to-background">
+            <SheetHeader>
+                <SheetTitle className="sr-only">Now Playing: {currentSong.title}</SheetTitle>
+                <SheetDescription className="sr-only">Music player controls and details for the current song.</SheetDescription>
+            </SheetHeader>
             <div className="w-full max-w-md mx-auto flex flex-col items-center gap-6">
                 <div className="w-full aspect-square bg-muted rounded-lg shadow-2xl mt-8">
                     {artworkUrl ? (
