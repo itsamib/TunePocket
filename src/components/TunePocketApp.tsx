@@ -1,19 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { addSong, getSongs, initDB, updateSong, getPlaylists, addPlaylist, updatePlaylistSongs, deletePlaylist } from '@/lib/db';
 import { getTelegramFile } from '@/ai/flows/get-telegram-file';
 import { sendTelegramMessage } from '@/ai/flows/send-telegram-message';
 import type { Song, SongGroup, StoredSong, EditableSongData, Playlist } from '@/types';
 import Player from './Player';
 import { SongList } from './SongList';
-import { FileUpload } from './FileUpload';
 import { EditSongDialog } from './EditSongDialog';
 import { AddToPlaylistDialog } from './AddToPlaylistDialog';
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
-import { Separator } from './ui/separator';
+import { Button } from './ui/button';
 import { Buffer } from 'buffer';
 import * as mmb from 'music-metadata-browser';
 import { AddSongsToPlaylistDialog } from './AddSongsToPlaylistDialog';
@@ -32,6 +31,7 @@ export default function TunePocketApp() {
   const [songToAddToPlaylist, setSongToAddToPlaylist] = useState<Song | null>(null);
   const [playlistToEdit, setPlaylistToEdit] = useState<Playlist | null>(null);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const processAndSaveSong = useCallback(async (file: Blob, defaultTitle: string): Promise<Song | null> => {
     if (file.size > 50 * 1024 * 1024) { // 50MB limit
@@ -319,6 +319,21 @@ export default function TunePocketApp() {
     setPlaylistToEdit(null);
   }, [toast]);
 
+  const handleFileButtonClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleManualUpload(file);
+    }
+    // Reset file input
+    if (event.target) {
+        event.target.value = '';
+    }
+  };
+
 
   const handlePlayPause = () => {
     if (currentSong) {
@@ -427,11 +442,6 @@ export default function TunePocketApp() {
                   onOpenAddSongsToPlaylist={handleOpenAddSongsToPlaylist}
                   currentSong={currentSong} 
                 />
-                <Separator />
-                <FileUpload 
-                  onFileSelect={handleManualUpload} 
-                  isLoading={isLoading && !!processingMessage}
-                />
             </div>
         </ScrollArea>
        </main>
@@ -455,6 +465,21 @@ export default function TunePocketApp() {
         onClose={() => setPlaylistToEdit(null)}
         onConfirm={handleConfirmAddSongsToPlaylist}
       />
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleFileSelected} 
+        className="hidden" 
+        accept="audio/*,.m4a"
+      />
+      <Button 
+        onClick={handleFileButtonClick}
+        disabled={isLoading && !!processingMessage}
+        className="fixed bottom-24 right-4 z-50 h-16 w-16 rounded-full shadow-lg"
+      >
+        <Plus className="w-8 h-8" />
+        <span className="sr-only">Add Song</span>
+      </Button>
       <div className="pb-36" /> {/* Spacer for player */}
       <Player 
         currentSong={currentSong} 
