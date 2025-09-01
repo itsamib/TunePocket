@@ -151,67 +151,66 @@ export default function Player({
             </div>
         </SheetTrigger>
         <SheetContent side="bottom" className="h-screen p-0 flex flex-col border-none text-white">
-            <div 
-                className="absolute inset-0 bg-cover bg-center"
-                style={{ backgroundImage: artworkUrl ? `url(${artworkUrl})` : 'none' }}
-            >
-                <div className="absolute inset-0 bg-black/70" />
-            </div>
+          <div 
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: artworkUrl ? `url(${artworkUrl})` : 'none' }}
+          />
+          <div className="absolute inset-0 bg-black/70" />
           
-            <div className="relative z-10 flex flex-col h-full p-6">
-                <SheetHeader className="text-left shrink-0">
-                    <SheetTitle className="font-headline text-3xl">{currentSong.title}</SheetTitle>
-                    <SheetDescription className="text-white/80">{currentSong.artist}</SheetDescription>
-                    <p className="text-sm text-white/60">{currentSong.album}</p>
-                </SheetHeader>
+          <div className="relative z-10 flex flex-col h-full p-6">
+              <SheetHeader className="text-left shrink-0">
+                  <SheetTitle className="font-headline text-3xl">{currentSong.title}</SheetTitle>
+                  <SheetDescription className="text-white/80">{currentSong.artist}</SheetDescription>
+                  <p className="text-sm text-white/60">{currentSong.album}</p>
+              </SheetHeader>
 
-                <div className="flex-grow flex flex-col justify-center items-center gap-6">
-                     <div className="w-full max-w-md">
-                        <Slider
-                            value={[progress]}
-                            onValueChange={handleSeek}
-                            max={100}
-                            step={1}
-                            className="[&>span:first-child]:h-1 [&>span>span]:h-1 [&>span:last-child]:bg-white"
-                        />
-                        <div className="flex justify-between items-center text-xs mt-2 text-white/80">
-                            <span>{formatTime(currentTime)}</span>
-                            <span>{formatTime(duration)}</span>
-                        </div>
-                    </div>
+              <div className="flex-grow flex flex-col justify-center items-center gap-8">
+                   <div className="w-full max-w-md">
+                      <Slider
+                          value={[progress]}
+                          onValueChange={handleSeek}
+                          max={100}
+                          step={1}
+                          className="[&>span:first-child]:h-1 [&>span>span]:h-1 [&>span:last-child]:bg-white"
+                      />
+                      <div className="flex justify-between items-center text-xs mt-2 text-white/80">
+                          <span>{formatTime(currentTime)}</span>
+                          <span>{formatTime(duration)}</span>
+                      </div>
+                  </div>
 
-                    <div className="flex items-center justify-center gap-2 w-full">
-                        <Button variant="ghost" size="icon" onClick={onToggleShuffle} className={cn('h-14 w-14 text-white/80', isShuffle && 'text-primary')}>
-                            <Shuffle />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={onPrev} className="h-14 w-14 text-white">
-                            <SkipBack size={28}/>
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={onPlayPause} className="w-20 h-20 rounded-full bg-white/20 text-white hover:bg-white/30">
-                            {isLoading ? <Loader2 className="animate-spin" /> : isPlaying ? <Pause size={40}/> : <Play size={40} />}
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={onNext} className="h-14 w-14 text-white">
-                            <SkipForward size={28} />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={onCycleRepeatMode} className="h-14 w-14 text-white/80">
-                            {renderRepeatIcon()}
-                        </Button>
-                    </div>
-                </div>
+                  <div className="flex items-center justify-center gap-2 w-full">
+                      <Button variant="ghost" size="icon" onClick={onToggleShuffle} className={cn('h-14 w-14 text-white/80', isShuffle && 'text-primary')}>
+                          <Shuffle />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={onPrev} className="h-14 w-14 text-white">
+                          <SkipBack size={28}/>
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={onPlayPause} className="w-20 h-20 rounded-full text-white border border-white/50 hover:bg-white/10">
+                          {isLoading ? <Loader2 className="animate-spin" /> : isPlaying ? <Pause size={40}/> : <Play size={40} />}
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={onNext} className="h-14 w-14 text-white">
+                          <SkipForward size={28} />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={onCycleRepeatMode} className="h-14 w-14 text-white/80">
+                          {renderRepeatIcon()}
+                      </Button>
+                  </div>
+              </div>
 
-                <div className="flex items-center gap-2 w-full max-w-xs mx-auto shrink-0 pb-4">
-                    <Button variant="ghost" size="icon" onClick={() => setIsMuted(!isMuted)} className="text-white/80">
-                        {isMuted || volume === 0 ? <VolumeX /> : <Volume2 />}
-                    </Button>
-                    <Slider
-                    value={[isMuted ? 0 : volume]}
-                    onValueChange={handleVolumeChange}
-                    max={1}
-                    step={0.05}
-                    className="[&>span:first-child]:h-1 [&>span>span]:h-1 [&>span:last-child]:bg-white"
-                    />
-                </div>
-            </div>
+              <div className="flex items-center gap-2 w-full max-w-xs mx-auto shrink-0 pb-4">
+                  <Button variant="ghost" size="icon" onClick={() => setIsMuted(!isMuted)} className="text-white/80">
+                      {isMuted || volume === 0 ? <VolumeX /> : <Volume2 />}
+                  </Button>
+                  <Slider
+                  value={[isMuted ? 0 : volume]}
+                  onValueChange={handleVolumeChange}
+                  max={1}
+                  step={0.05}
+                  className="[&>span:first-child]:h-1 [&>span>span]:h-1 [&>span:last-child]:bg-white"
+                  />
+              </div>
+          </div>
         </SheetContent>
       </Sheet>
     </>
