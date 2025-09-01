@@ -34,3 +34,17 @@ export type SongGroup = {
     }
   };
 };
+
+
+// Playlist Types
+export interface Playlist {
+    id: number;
+    name: string;
+    songIds: number[];
+}
+
+export interface StoredPlaylist {
+    id: number;
+    name: string;
+    songIds: number[];
+}

@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { addSong, getSongs, initDB, updateSong } from '@/lib/db';
+import { addSong, getSongs, initDB, updateSong, getPlaylists, addPlaylist, updatePlaylistSongs, deletePlaylist } from '@/lib/db';
 import { getTelegramFile } from '@/ai/flows/get-telegram-file';
 import { sendTelegramMessage } from '@/ai/flows/send-telegram-message';
-import type { Song, SongGroup, StoredSong, EditableSongData } from '@/types';
+import type { Song, SongGroup, StoredSong, EditableSongData, Playlist } from '@/types';
 import Player from './Player';
 import { SongList } from './SongList';
 import { FileUpload } from './FileUpload';
 import { EditSongDialog } from './EditSongDialog';
+import { AddToPlaylistDialog } from './AddToPlaylistDialog';
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
@@ -21,11 +22,13 @@ export default function TunePocketApp() {
   const [tg, setTg] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [songs, setSongs] = useState<Song[]>([]);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [processingMessage, setProcessingMessage] = useState('Initializing...');
   const [editingSong, setEditingSong] = useState<Song | null>(null);
+  const [songToAddToPlaylist, setSongToAddToPlaylist] = useState<Song | null>(null);
   const { toast } = useToast();
 
   const processAndSaveSong = useCallback(async (file: Blob, defaultTitle: string): Promise<Song | null> => {
@@ -41,7 +44,7 @@ export default function TunePocketApp() {
 
     try {
         const fileArrayBuffer = await file.arrayBuffer();
-        const metadata = await mmb.parseBuffer(Buffer.from(fileArrayBuffer), file.type);
+        const metadata = await mmb.parseBuffer(Buffer.from(fileArrayBuffer), file.type, { duration: true });
         
         const title = metadata.common.title || defaultTitle;
         const artist = metadata.common.artist || 'Unknown Artist';
@@ -171,8 +174,13 @@ export default function TunePocketApp() {
         }).sort((a, b) => a.title.localeCompare(b.title));
         setSongs(playableSongs);
 
+        setProcessingMessage('Loading playlists...');
+        const storedPlaylists = await getPlaylists();
+        setPlaylists(storedPlaylists);
+
+
       } catch (error) {
-        console.error('DB initialization or song loading failed', error);
+        console.error('DB initialization or data loading failed', error);
         toast({ title: "Initialization Error", description: "Could not load the song library.", variant: "destructive" });
         setIsLoading(false);
         setProcessingMessage('');
@@ -209,7 +217,7 @@ export default function TunePocketApp() {
     setIsLoading(true);
     setProcessingMessage('Processing file...');
     try {
-        const savedSong = await processAndSaveSong(file, file.name);
+        const savedSong = await processAndSaveSong(file, file.name.replace(/\.[^/.]+$/, ""));
         if (savedSong) {
             toast({ title: "Song Added!", description: `\'\'\'${savedSong.title}\'\'\' has been added.` });
         }
@@ -227,25 +235,60 @@ export default function TunePocketApp() {
 
     try {
       await updateSong(editingSong.id, updatedData);
-
-      // Update the song in the local state
       const updatedSongs = songs.map(s =>
           s.id === editingSong.id ? { ...s, ...updatedData } : s
         ).sort((a, b) => a.title.localeCompare(b.title));
-
       setSongs(updatedSongs);
-      
-      // If the currently playing song is the one being edited, update it as well
       if(currentSong?.id === editingSong.id) {
           setCurrentSong(prev => prev ? { ...prev, ...updatedData } : null);
       }
-
       toast({ title: "Song Updated", description: "The song details have been saved." });
     } catch (error) {
       console.error("Failed to update song:", error);
       toast({ title: "Update Failed", description: "Could not save the changes.", variant: "destructive" });
     }
   }, [editingSong, toast, songs, currentSong?.id]);
+
+  const handleCreatePlaylist = useCallback(async () => {
+    const playlistName = prompt("Enter the name for the new playlist:");
+    if (playlistName && playlistName.trim() !== "") {
+        try {
+            const newPlaylist = await addPlaylist(playlistName.trim());
+            setPlaylists(prev => [...prev, newPlaylist].sort((a,b) => a.name.localeCompare(b.name)));
+            toast({ title: "Playlist Created", description: `Playlist '${newPlaylist.name}' has been created.` });
+        } catch (error) {
+            console.error("Failed to create playlist", error);
+            toast({ title: "Error", description: "Could not create the playlist.", variant: "destructive" });
+        }
+    }
+  }, [toast]);
+  
+  const handleDeletePlaylist = useCallback(async (playlistId: number) => {
+    try {
+        await deletePlaylist(playlistId);
+        setPlaylists(prev => prev.filter(p => p.id !== playlistId));
+        toast({ title: "Playlist Deleted", description: "The playlist has been removed." });
+    } catch (error) {
+        console.error("Failed to delete playlist", error);
+        toast({ title: "Error", description: "Could not delete the playlist.", variant: "destructive" });
+    }
+  }, [toast]);
+
+  const handleAddSongToPlaylist = useCallback(async (playlistId: number) => {
+    if (!songToAddToPlaylist) return;
+    try {
+        const updatedPlaylist = await updatePlaylistSongs(playlistId, songToAddToPlaylist.id);
+        if (updatedPlaylist) {
+            setPlaylists(prev => prev.map(p => p.id === playlistId ? updatedPlaylist : p));
+            toast({ title: "Song Added", description: `Added to '${updatedPlaylist.name}'.` });
+        } else {
+             toast({ title: "Already Exists", description: `This song is already in the playlist.` });
+        }
+    } catch (error) {
+        console.error("Failed to add song to playlist", error);
+        toast({ title: "Error", description: "Could not add the song to the playlist.", variant: "destructive" });
+    }
+  }, [songToAddToPlaylist, toast]);
 
 
   const handlePlayPause = () => {
@@ -262,6 +305,10 @@ export default function TunePocketApp() {
   const handleEditSong = (song: Song) => {
     setEditingSong(song);
   };
+  
+  const handleOpenAddToPlaylist = (song: Song) => {
+    setSongToAddToPlaylist(song);
+  }
 
   const playNext = useCallback(() => {
     if (!currentSong || songs.length === 0) return;
@@ -338,8 +385,12 @@ export default function TunePocketApp() {
                 <SongList 
                   songs={songs}
                   groupedSongs={groupedSongs} 
+                  playlists={playlists}
                   onSelectSong={handleSelectSong} 
                   onEditSong={handleEditSong}
+                  onOpenAddToPlaylist={handleOpenAddToPlaylist}
+                  onCreatePlaylist={handleCreatePlaylist}
+                  onDeletePlaylist={handleDeletePlaylist}
                   currentSong={currentSong} 
                 />
                 <Separator />
@@ -355,6 +406,13 @@ export default function TunePocketApp() {
         onClose={() => setEditingSong(null)}
         song={editingSong}
         onSave={handleUpdateSong}
+      />
+      <AddToPlaylistDialog
+        isOpen={!!songToAddToPlaylist}
+        onClose={() => setSongToAddToPlaylist(null)}
+        song={songToAddToPlaylist}
+        playlists={playlists}
+        onSelectPlaylist={handleAddSongToPlaylist}
       />
       <div className="pb-36" /> {/* Spacer for player */}
       <Player 
