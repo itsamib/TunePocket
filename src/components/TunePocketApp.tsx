@@ -81,7 +81,7 @@ export default function TunePocketApp() {
             contentType: newSongData.contentType,
         };
         
-        setSongs(prevSongs => [...prevSongs, finalSong]);
+        setSongs(prevSongs => [...prevSongs, finalSong].sort((a, b) => a.title.localeCompare(b.title)));
 
         return finalSong;
 
@@ -168,7 +168,7 @@ export default function TunePocketApp() {
              localURL,
              artwork,
            }
-        });
+        }).sort((a, b) => a.title.localeCompare(b.title));
         setSongs(playableSongs);
 
       } catch (error) {
@@ -229,11 +229,11 @@ export default function TunePocketApp() {
       await updateSong(editingSong.id, updatedData);
 
       // Update the song in the local state
-      setSongs(prevSongs =>
-        prevSongs.map(s =>
+      const updatedSongs = songs.map(s =>
           s.id === editingSong.id ? { ...s, ...updatedData } : s
-        )
-      );
+        ).sort((a, b) => a.title.localeCompare(b.title));
+
+      setSongs(updatedSongs);
       
       // If the currently playing song is the one being edited, update it as well
       if(currentSong?.id === editingSong.id) {
@@ -245,7 +245,7 @@ export default function TunePocketApp() {
       console.error("Failed to update song:", error);
       toast({ title: "Update Failed", description: "Could not save the changes.", variant: "destructive" });
     }
-  }, [editingSong, toast, currentSong?.id]);
+  }, [editingSong, toast, songs, currentSong?.id]);
 
 
   const handlePlayPause = () => {
@@ -336,6 +336,7 @@ export default function TunePocketApp() {
         <ScrollArea className="h-full">
             <div className="p-4 space-y-4">
                 <SongList 
+                  songs={songs}
                   groupedSongs={groupedSongs} 
                   onSelectSong={handleSelectSong} 
                   onEditSong={handleEditSong}
@@ -345,7 +346,6 @@ export default function TunePocketApp() {
                 <FileUpload 
                   onFileSelect={handleManualUpload} 
                   isLoading={isLoading && !!processingMessage}
-                  accept="audio/mpeg,audio/m4a,audio/wav,audio/ogg,audio/flac"
                 />
             </div>
         </ScrollArea>
