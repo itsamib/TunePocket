@@ -191,7 +191,7 @@ export default function Player({
                     <Button variant="ghost" size="icon" onClick={onPrev} className="h-14 w-14">
                         <SkipBack />
                     </Button>
-                    <Button variant="default" size="icon" onClick={onPlayPause} className="w-20 h-20 rounded-full">
+                    <Button variant="default" size="icon" onClick={onPlayPause} className="w-20 h-20 rounded-full shadow-lg">
                         {isLoading ? <Loader2 className="animate-spin" /> : isPlaying ? <Pause size={32}/> : <Play size={32} />}
                     </Button>
                     <Button variant="ghost" size="icon" onClick={onNext} className="h-14 w-14">
