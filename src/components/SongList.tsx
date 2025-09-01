@@ -29,6 +29,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { cn } from '@/lib/utils';
 
 interface SongListProps {
   songs: Song[];
@@ -216,7 +217,7 @@ const PlaylistView = ({ playlists, songs, currentSong, onSelectSong, onEditSong,
                                 <div className="flex items-center gap-1 shrink-0 pr-4">
                                      <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <Button variant="outline" size="icon" onClick={() => onOpenAddSongsToPlaylist(playlist)}>
+                                            <Button variant="outline" size="sm" className="p-0 w-8 h-8" onClick={() => onOpenAddSongsToPlaylist(playlist)}>
                                                 <FolderPlus className="h-4 w-4" />
                                             </Button>
                                         </TooltipTrigger>
@@ -226,7 +227,7 @@ const PlaylistView = ({ playlists, songs, currentSong, onSelectSong, onEditSong,
                                     </Tooltip>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <Button variant="destructive" size="icon" onClick={() => handleDeleteClick(playlist.id)}>
+                                            <Button variant="destructive" size="sm" className="p-0 w-8 h-8" onClick={() => handleDeleteClick(playlist.id)}>
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
                                         </TooltipTrigger>
