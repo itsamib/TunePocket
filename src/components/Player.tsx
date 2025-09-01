@@ -150,7 +150,7 @@ export default function Player({
                 <Progress value={progress} className="h-1 w-full rounded-none" />
             </div>
         </SheetTrigger>
-        <SheetContent side="bottom" className="h-[90vh] p-4 flex flex-col items-center justify-between gap-6 border-none bg-gradient-to-b from-primary/20 via-background to-background">
+        <SheetContent side="bottom" className="h-[90vh] p-4 flex flex-col border-none bg-gradient-to-b from-primary/20 via-background to-background">
             <SheetHeader>
                 <SheetTitle className="sr-only">Now Playing: {currentSong.title}</SheetTitle>
                 <SheetDescription className="sr-only">Music player controls and details for the current song.</SheetDescription>
