@@ -155,11 +155,11 @@ export default function Player({
                 className="absolute inset-0 bg-cover bg-center"
                 style={{ backgroundImage: artworkUrl ? `url(${artworkUrl})` : 'none' }}
             >
-                <div className="absolute inset-0 bg-black/60 backdrop-blur-lg" />
+                <div className="absolute inset-0 bg-black/70" />
             </div>
           
             <div className="relative z-10 flex flex-col h-full p-6">
-                <SheetHeader className="text-left">
+                <SheetHeader className="text-left shrink-0">
                     <SheetTitle className="font-headline text-3xl">{currentSong.title}</SheetTitle>
                     <SheetDescription className="text-white/80">{currentSong.artist}</SheetDescription>
                     <p className="text-sm text-white/60">{currentSong.album}</p>
