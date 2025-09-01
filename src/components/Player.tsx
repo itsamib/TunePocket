@@ -157,7 +157,7 @@ export default function Player({
           />
           <div className="absolute inset-0 bg-black/70" />
           
-          <div className="relative z-10 flex flex-col h-full p-6 justify-end">
+          <div className="relative z-10 flex flex-col h-full p-6 justify-between">
               <SheetHeader className="text-left shrink-0">
                   <SheetTitle className="font-headline text-3xl">{currentSong.title}</SheetTitle>
                   <SheetDescription className="text-white/80">{currentSong.artist}</SheetDescription>
