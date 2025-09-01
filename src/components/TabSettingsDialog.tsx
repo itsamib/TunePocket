@@ -78,7 +78,7 @@ export function TabSettingsDialog({
         </DialogHeader>
         <div className="py-4">
           <DragDropContext onDragEnd={handleDragEnd}>
-            <Droppable droppableId="tabs">
+            <Droppable droppableId="tabs" isDropDisabled={false}>
               {(provided) => (
                 <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
                   {localTabs.map((tab, index) => (

@@ -34,13 +34,7 @@ export function SettingsSheet({
   onTabConfigChange,
 }: SettingsSheetProps) {
   const [isTabSettingsOpen, setIsTabSettingsOpen] = useState(false);
-  const [hasMounted, setHasMounted] = useState(false);
-
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
-
-
+  
   return (
     <>
       <Sheet open={isOpen} onOpenChange={onClose}>
@@ -70,7 +64,7 @@ export function SettingsSheet({
       </Sheet>
       
       {/* This component will only be rendered on the client side after mounting */}
-      {hasMounted && (
+      {isTabSettingsOpen && (
         <TabSettingsDialog
           isOpen={isTabSettingsOpen}
           onClose={() => setIsTabSettingsOpen(false)}
