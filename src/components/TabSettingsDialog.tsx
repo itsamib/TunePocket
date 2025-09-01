@@ -19,6 +19,8 @@ import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
 import { GripVertical } from 'lucide-react';
 import type { TabConfig } from '@/types';
+import { cn } from '@/lib/utils';
+
 
 interface TabSettingsDialogProps {
   isOpen: boolean;
@@ -96,11 +98,14 @@ export function TabSettingsDialog({
                         <div
                           ref={provided.innerRef}
                           {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          className={`flex items-center gap-2 p-2 rounded-md border
-                            ${snapshot.isDragging ? 'bg-accent shadow-lg' : 'bg-background'}`}
+                          className={cn(
+                            "flex items-center gap-2 p-2 rounded-md border bg-background",
+                            snapshot.isDragging && "bg-accent shadow-lg"
+                          )}
                         >
-                          <GripVertical className="text-muted-foreground" />
+                          <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
+                            <GripVertical className="text-muted-foreground" />
+                          </div>
                           <Checkbox
                             id={`vis-${tab.id}`}
                             checked={tab.isVisible}
