@@ -23,6 +23,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 interface SongListProps {
   songs: Song[];
@@ -193,7 +199,7 @@ const PlaylistView = ({ playlists, songs, currentSong, onSelectSong, onEditSong,
     };
 
     return (
-        <div>
+        <TooltipProvider>
             <Button onClick={onCreatePlaylist} className="w-full mb-4">
                 <PlusCircle className="mr-2" /> Create New Playlist
             </Button>
@@ -201,20 +207,36 @@ const PlaylistView = ({ playlists, songs, currentSong, onSelectSong, onEditSong,
                 <Accordion type="multiple" className="w-full">
                     {playlists.map(playlist => (
                         <AccordionItem value={`playlist-${playlist.id}`} key={playlist.id}>
-                            <AccordionTrigger className="font-headline text-lg flex items-center justify-between hover:no-underline">
-                                <div className="flex items-center gap-2">
-                                    <ListMusic className="w-5 h-5 text-primary"/> {playlist.name}
+                            <div className="flex items-center w-full">
+                                <AccordionTrigger className="font-headline text-lg flex-grow hover:no-underline">
+                                    <div className="flex items-center gap-2">
+                                        <ListMusic className="w-5 h-5 text-primary"/> {playlist.name}
+                                    </div>
+                                </AccordionTrigger>
+                                <div className="flex items-center gap-1 shrink-0 pr-4">
+                                     <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button variant="outline" size="icon" onClick={() => onOpenAddSongsToPlaylist(playlist)}>
+                                                <FolderPlus className="h-4 w-4" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Add songs to playlist</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button variant="destructive" size="icon" onClick={() => handleDeleteClick(playlist.id)}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Delete playlist</p>
+                                        </TooltipContent>
+                                    </Tooltip>
                                 </div>
-                            </AccordionTrigger>
+                            </div>
                             <AccordionContent>
-                                <div className="flex justify-end gap-2 mb-2">
-                                    <Button variant="outline" size="sm" onClick={() => onOpenAddSongsToPlaylist(playlist)}>
-                                        <FolderPlus className="mr-2 h-4 w-4" /> Add Songs
-                                    </Button>
-                                    <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(playlist.id)}>
-                                        <Trash2 className="mr-2 h-4 w-4" /> Delete Playlist
-                                    </Button>
-                                </div>
                                 {playlist.songIds.length > 0 ? (
                                     <ul className="space-y-1 pt-1 pl-4">
                                         {playlist.songIds.map(songId => {
@@ -223,7 +245,7 @@ const PlaylistView = ({ playlists, songs, currentSong, onSelectSong, onEditSong,
                                         })}
                                     </ul>
                                 ) : (
-                                    <p className="text-sm text-muted-foreground pl-4 pt-2">This playlist is empty. Click &quot;Add Songs&quot; to get started.</p>
+                                    <p className="text-sm text-muted-foreground pl-4 pt-2">This playlist is empty. Click the plus icon to add songs.</p>
                                 )}
                             </AccordionContent>
                         </AccordionItem>
@@ -249,7 +271,7 @@ const PlaylistView = ({ playlists, songs, currentSong, onSelectSong, onEditSong,
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </div>
+        </TooltipProvider>
     )
 }
 
