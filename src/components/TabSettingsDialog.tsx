@@ -36,13 +36,6 @@ export function TabSettingsDialog({
   onSave,
 }: TabSettingsDialogProps) {
   const [localTabs, setLocalTabs] = useState(tabConfig);
-  const [isBrowser, setIsBrowser] = useState(false);
-
-  useEffect(() => {
-    // react-beautiful-dnd requires the browser environment.
-    // This effect ensures the component only renders on the client.
-    setIsBrowser(true);
-  }, []);
 
   useEffect(() => {
     // Sync local state when the dialog is opened with new props
@@ -73,10 +66,6 @@ export function TabSettingsDialog({
     onSave(localTabs);
     onClose();
   };
-
-  if (!isBrowser) {
-    return null; // Don't render on the server
-  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

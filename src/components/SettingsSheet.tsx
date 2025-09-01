@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import {
   Sheet,
   SheetContent,
@@ -10,8 +11,14 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from './ui/button';
 import { Settings, SlidersHorizontal } from 'lucide-react';
-import { TabSettingsDialog } from './TabSettingsDialog';
 import type { TabConfig } from '@/types';
+
+// Dynamically import TabSettingsDialog with SSR disabled
+const TabSettingsDialog = dynamic(
+  () => import('./TabSettingsDialog').then((mod) => mod.TabSettingsDialog),
+  { ssr: false }
+);
+
 
 interface SettingsSheetProps {
   isOpen: boolean;
@@ -55,6 +62,8 @@ export function SettingsSheet({
           </div>
         </SheetContent>
       </Sheet>
+      
+      {/* This component will only be rendered on the client side */}
       <TabSettingsDialog
         isOpen={isTabSettingsOpen}
         onClose={() => setIsTabSettingsOpen(false)}
