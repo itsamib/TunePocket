@@ -2,11 +2,23 @@
 
 import { useState, useEffect } from 'react';
 import {
-  DragDropContext,
-  Droppable,
-  Draggable,
-  DropResult,
-} from 'react-beautiful-dnd';
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
 import {
   Dialog,
   DialogContent,
@@ -29,6 +41,45 @@ interface TabSettingsDialogProps {
   onSave: (newConfig: TabConfig[]) => void;
 }
 
+function SortableItem({ tab, onVisibilityChange }: { tab: TabConfig, onVisibilityChange: (id: string, visible: boolean) => void }) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({id: tab.id});
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 10 : 'auto',
+    };
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            className={cn(
+                "flex items-center gap-2 p-2 rounded-md border bg-background",
+                isDragging && "bg-accent shadow-lg"
+            )}
+        >
+            <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1">
+                <GripVertical className="text-muted-foreground" />
+            </div>
+            <Checkbox
+                id={`vis-${tab.id}`}
+                checked={tab.isVisible}
+                onCheckedChange={(checked) => onVisibilityChange(tab.id, !!checked)}
+            />
+            <label htmlFor={`vis-${tab.id}`} className="flex-grow">{tab.name}</label>
+        </div>
+    );
+}
+
+
 export function TabSettingsDialog({
   isOpen,
   onClose,
@@ -44,14 +95,24 @@ export function TabSettingsDialog({
     }
   }, [isOpen, tabConfig]);
 
-  const handleDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
-    const items = Array.from(localTabs);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-
-    setLocalTabs(items);
+  const handleDragEnd = (event: DragEndEvent) => {
+    const {active, over} = event;
+    
+    if (active.id !== over?.id) {
+      setLocalTabs((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over!.id);
+        
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
   };
 
   const handleVisibilityChange = (id: string, isVisible: boolean) => {
@@ -77,39 +138,22 @@ export function TabSettingsDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <Droppable droppableId="tabs" isDropDisabled={false}>
-              {(provided) => (
-                <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
-                  {localTabs.map((tab, index) => (
-                    <Draggable key={tab.id} draggableId={tab.id} index={index}>
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          className={cn(
-                            "flex items-center gap-2 p-2 rounded-md border bg-background",
-                            snapshot.isDragging && "bg-accent shadow-lg"
-                          )}
-                        >
-                          <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
-                            <GripVertical className="text-muted-foreground" />
-                          </div>
-                          <Checkbox
-                            id={`vis-${tab.id}`}
-                            checked={tab.isVisible}
-                            onCheckedChange={(checked) => handleVisibilityChange(tab.id, !!checked)}
-                          />
-                          <label htmlFor={`vis-${tab.id}`} className="flex-grow">{tab.name}</label>
-                        </div>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          </DragDropContext>
+            <DndContext 
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+            >
+                <SortableContext 
+                    items={localTabs}
+                    strategy={verticalListSortingStrategy}
+                >
+                    <div className="space-y-2">
+                        {localTabs.map(tab => (
+                            <SortableItem key={tab.id} tab={tab} onVisibilityChange={handleVisibilityChange} />
+                        ))}
+                    </div>
+                </SortableContext>
+            </DndContext>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
