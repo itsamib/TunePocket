@@ -478,7 +478,7 @@ export default function TunePocketApp() {
        </header>
        <main className="flex-grow overflow-hidden">
         <ScrollArea className="h-full">
-            <div className="p-4 space-y-4">
+            <div className="p-4 space-y-4 pb-32">
                 <SongList 
                   songs={songs}
                   groupedSongs={groupedSongs} 
@@ -529,7 +529,7 @@ export default function TunePocketApp() {
         <Plus className="w-8 h-8" />
         <span className="sr-only">Add Song</span>
       </Button>
-      <div className="pb-36" /> {/* Spacer for player */}
+      
       <Player 
         currentSong={currentSong} 
         isPlaying={isPlaying} 
