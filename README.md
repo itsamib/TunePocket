@@ -12,6 +12,24 @@ This is a Next.js project for a Telegram Mini App called TunePocket. It allows u
 
 ---
 
+## CRITICAL: Configuration
+
+For the app to work, you MUST configure your Bot Token in **TWO** places:
+
+1.  **For the Web App (Next.js Server):**
+    *   Open the `.env.local` file in the root of your project.
+    *   Replace `YOUR_HTTP_API_TOKEN` with your actual bot token.
+    *   **Example:** `TELEGRAM_BOT_TOKEN="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"`
+    *   This allows the web app to download files from Telegram.
+
+2.  **For the Telegram Bot (Python Script):**
+    *   Open the `bot.py` file.
+    *   Replace `https://your-mini-app-url.com` with the **public URL** of your web app (e.g., your `ngrok` URL for testing).
+
+The Python bot reads the same `.env.local` file for the token, so you only need to set the token there.
+
+---
+
 ## Running the Application
 
 This project has **two separate parts** that must run at the same time in **two separate terminals**.
@@ -30,37 +48,20 @@ This will make the web application available, usually on `http://localhost:9002`
 
 In your second terminal, you must run the Python script for the bot.
 
-#### **CRITICAL: Python Environment Setup**
+#### **Python Environment Setup**
 
-Your development environment is managed by **Nix**. This means standard Python installation methods (`pip`, `venv`) will **fail** with an `externally-managed-environment` error.
-
-To run the bot, you **MUST** configure your Nix environment correctly.
-
-1.  **Find your Nix configuration file:** Find the file named `dev.nix` or `.replit` in your project's root directory. This is the central file that defines your development environment.
-
-2.  **Add Python Dependencies:** Edit this file and add the following packages to the list of environment packages (e.g., inside `dev.nix`'s `packages` or `.replit`'s `deps` list). This tells Nix to install Python and the necessary library.
-
-    ```nix
-    # Add these lines to your Nix config file (e.g., dev.nix)
-    pkgs.python311Full
-    pkgs.python311Packages.pip
-    pkgs.python311Packages.python-telegram-bot
-    ```
-
-3.  **Rebuild the Environment:** After saving the file, your environment must be rebuilt for the changes to take effect. This usually happens automatically. If not, restart your development workspace.
+Your development environment is managed by **Nix**. This means standard Python installation methods (`pip`, `venv`) will **fail**. The required Python packages (`python-telegram-bot`, `python-dotenv`) are already configured in your environment.
 
 #### **Configure and Run the Bot Script**
 
-1.  **Edit `bot.py`:** Open the `bot.py` file and replace the placeholder values for `BOT_TOKEN` and `MINI_APP_URL` with your actual bot token and the URL of your web app.
-
+1.  **Set App URL in `bot.py`:** Open the `bot.py` file and replace the placeholder value for `MINI_APP_URL` with your actual **public** web app URL.
 2.  **Run the bot:** Once the environment is correctly configured, run the bot using this command:
 
     ```bash
     npm run bot:run
     ```
 
-    You should see a log message confirming the bot is running. If you still get a `command not found` error, it means the Nix environment setup (Step 2) was not successful.
-
+    You should see a log message confirming the bot is running. If you get an error, double-check your `.env.local` and `bot.py` configurations.
 
 git remote add origin https://github.com/itsamib/TunePocket.git
 
