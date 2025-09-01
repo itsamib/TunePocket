@@ -155,7 +155,7 @@ export default function Player({
                 <SheetTitle className="sr-only">Now Playing: {currentSong.title}</SheetTitle>
                 <SheetDescription className="sr-only">Music player controls and details for the current song.</SheetDescription>
             </SheetHeader>
-            <div className="w-full max-w-md mx-auto flex flex-col items-center gap-6">
+            <div className="w-full max-w-md mx-auto flex flex-col items-center gap-6 flex-grow">
                 <div className="w-full aspect-square bg-muted rounded-lg shadow-2xl mt-8">
                     {artworkUrl ? (
                         <Image src={artworkUrl} alt="Album art" width={400} height={400} className="rounded-lg object-cover w-full h-full"/>
@@ -202,7 +202,7 @@ export default function Player({
                     </Button>
                 </div>
 
-                <div className="flex items-center gap-2 w-full max-w-xs">
+                <div className="flex items-center gap-2 w-full max-w-xs mt-auto pb-4">
                     <Button variant="ghost" size="icon" onClick={() => setIsMuted(!isMuted)}>
                         {isMuted || volume === 0 ? <VolumeX /> : <Volume2 />}
                     </Button>
