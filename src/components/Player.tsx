@@ -157,12 +157,12 @@ export default function Player({
           </SheetHeader>
           
           <div className="flex flex-col items-center justify-center flex-grow gap-4">
-              <div className="w-full max-w-xs aspect-square bg-muted rounded-lg shadow-2xl">
+              <div className="w-full max-w-64 aspect-square bg-muted rounded-lg shadow-2xl">
                   {artworkUrl ? (
-                      <Image src={artworkUrl} alt="Album art" width={400} height={400} className="rounded-lg object-cover w-full h-full"/>
+                      <Image src={artworkUrl} alt="Album art" width={256} height={256} className="rounded-lg object-cover w-full h-full"/>
                   ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                          <Music className="w-24 h-24 text-muted-foreground" />
+                          <Music className="w-20 h-20 text-muted-foreground" />
                       </div>
                   )}
               </div>
