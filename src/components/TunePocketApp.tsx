@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { addSong, getSongs, initDB, updateSong, getPlaylists, addPlaylist, updatePlaylistSongs, deletePlaylist } from '@/lib/db';
-import { getTelegramFile } from '@/ai/flows/get-telegram-file';
-import { sendTelegramMessage } from '@/ai/flows/send-telegram-message';
-import type { Song, SongGroup, StoredSong, EditableSongData, Playlist, TabConfig } from '@/types';
+import { addSong, getSongs, initDB, updateSong, getPlaylists, addPlaylist, updatePlaylistSongs, deletePlaylist, deleteSong as dbDeleteSong } from '@/lib/db';
+import { getTelegramFile } from '@/app/actions/get-telegram-file';
+import { sendTelegramMessage } from '@/app/actions/send-telegram-message';
+import type { Song, SongGroup, StoredSong, EditableSongData, Playlist, TabConfig, SongWithId } from '@/types';
 import Player from './Player';
 import { SongList } from './SongList';
 import { EditSongDialog } from './EditSongDialog';
@@ -37,6 +37,7 @@ export default function TunePocketApp() {
   const [isLoading, setIsLoading] = useState(true);
   const [processingMessage, setProcessingMessage] = useState('Initializing...');
   const [editingSong, setEditingSong] = useState<Song | null>(null);
+  const [songToDelete, setSongToDelete] = useState<SongWithId | null>(null);
   const [songToAddToPlaylist, setSongToAddToPlaylist] = useState<Song | null>(null);
   const [playlistToEdit, setPlaylistToEdit] = useState<Playlist | null>(null);
   const [isShuffle, setIsShuffle] = useState(false);
@@ -146,12 +147,12 @@ export default function TunePocketApp() {
         const savedSong = await processAndSaveSong(blob, fileName);
       
         if (savedSong) {
-            toast({ title: "Song Added!", description: `\'\'\'${savedSong.title}\'\'\' by ${savedSong.artist} has been added.` });
+            toast({ title: "Song Added!", description: `"${savedSong.title}" by ${savedSong.artist} has been added.` });
             
             setProcessingMessage('Sending confirmation...');
             await sendTelegramMessage({
               chatId: chatId,
-              text: `✅ Song "\'\'\'${savedSong.title}\'\'\'" was successfully added to your TunePocket library!`,
+              text: `✅ Song "${savedSong.title}" was successfully added to your TunePocket library!`,
             });
         }
 
@@ -260,7 +261,7 @@ export default function TunePocketApp() {
     try {
         const savedSong = await processAndSaveSong(file, file.name.replace(/\.[^/.]+$/, ""));
         if (savedSong) {
-            toast({ title: "Song Added!", description: `\'\'\'${savedSong.title}\'\'\' has been added.` });
+            toast({ title: "Song Added!", description: `"${savedSong.title}" has been added.` });
         }
     } catch (error: any) {
         console.error('Failed to process file', error);
@@ -289,6 +290,37 @@ export default function TunePocketApp() {
       toast({ title: "Update Failed", description: "Could not save the changes.", variant: "destructive" });
     }
   }, [editingSong, toast, songs, currentSong?.id]);
+
+    const handleDeleteSong = useCallback(async (songId: number) => {
+        if (!songId) return;
+
+        try {
+            const deletedSongTitle = songs.find(s => s.id === songId)?.title || "The song";
+            await dbDeleteSong(songId);
+
+            // Update songs list
+            setSongs(prevSongs => prevSongs.filter(s => s.id !== songId));
+
+            // Update playlists
+            setPlaylists(prevPlaylists =>
+                prevPlaylists.map(p => ({
+                    ...p,
+                    songIds: p.songIds.filter(id => id !== songId)
+                }))
+            );
+
+            // If the deleted song was the current song, stop playback
+            if (currentSong?.id === songId) {
+                setCurrentSong(null);
+                setIsPlaying(false);
+            }
+
+            toast({ title: "Song Deleted", description: `"${deletedSongTitle}" has been removed from your library.` });
+        } catch (error) {
+            console.error("Failed to delete song:", error);
+            toast({ title: "Delete Failed", description: "Could not delete the song.", variant: "destructive" });
+        }
+    }, [songs, currentSong, toast]);
 
   const handleCreatePlaylist = useCallback(async () => {
     const playlistName = prompt("Enter the name for the new playlist:");
@@ -375,6 +407,10 @@ export default function TunePocketApp() {
   
   const handleEditSong = (song: Song) => {
     setEditingSong(song);
+  };
+
+  const handleOpenDeleteSongDialog = (song: Song) => {
+    setSongToDelete({ id: song.id, title: song.title });
   };
   
   const handleOpenAddToPlaylist = (song: Song) => {
@@ -515,12 +551,16 @@ export default function TunePocketApp() {
                   playlists={playlists}
                   onSelectSong={handleSelectSong} 
                   onEditSong={handleEditSong}
+                  onDeleteSong={handleOpenDeleteSongDialog}
                   onOpenAddToPlaylist={handleOpenAddToPlaylist}
                   onCreatePlaylist={handleCreatePlaylist}
                   onDeletePlaylist={handleDeletePlaylist}
                   onOpenAddSongsToPlaylist={handleOpenAddSongsToPlaylist}
                   currentSong={currentSong} 
                   tabConfig={tabConfig}
+                  songToDelete={songToDelete}
+                  setSongToDelete={setSongToDelete}
+                  confirmDeleteSong={handleDeleteSong}
                 />
             </div>
         </ScrollArea>

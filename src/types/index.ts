@@ -16,6 +16,11 @@ export interface Song extends EditableSongData {
   contentType: string;
 }
 
+export interface SongWithId {
+    id: number;
+    title: string;
+}
+
 export interface StoredSong extends EditableSongData {
   id: number;
   fileBlob: ArrayBuffer; 

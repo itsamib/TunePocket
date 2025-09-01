@@ -118,6 +118,46 @@ export const updateSong = (id: number, dataToUpdate: EditableSongData): Promise<
     });
 };
 
+export const deleteSong = (songId: number): Promise<void> => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const currentDb = await initDBInternal();
+            // Start a transaction for both songs and playlists stores
+            const transaction = currentDb.transaction([SONGS_STORE_NAME, PLAYLISTS_STORE_NAME], 'readwrite');
+            const songsStore = transaction.objectStore(SONGS_STORE_NAME);
+            const playlistsStore = transaction.objectStore(PLAYLISTS_STORE_NAME);
+
+            // 1. Delete the song from the songs store
+            const deleteSongRequest = songsStore.delete(songId);
+            
+            deleteSongRequest.onerror = () => reject(deleteSongRequest.error);
+
+            // 2. Iterate over all playlists and remove the songId
+            const cursorRequest = playlistsStore.openCursor();
+            cursorRequest.onerror = () => reject(cursorRequest.error);
+            
+            cursorRequest.onsuccess = () => {
+                const cursor = cursorRequest.result;
+                if (cursor) {
+                    const playlist = cursor.value as StoredPlaylist;
+                    const songIndex = playlist.songIds.indexOf(songId);
+                    if (songIndex > -1) {
+                        playlist.songIds.splice(songIndex, 1);
+                        cursor.update(playlist); // Update the playlist in the store
+                    }
+                    cursor.continue();
+                }
+            };
+            
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+
+        } catch (error) {
+            reject(error);
+        }
+    });
+};
+
 
 // --- Playlist Functions ---
 

@@ -24,9 +24,9 @@ For the app to work, you MUST configure your Bot Token in **TWO** places:
 
 2.  **For the Telegram Bot (Python Script):**
     *   Open the `bot.py` file.
+    *   Replace `YOUR_HTTP_API_TOKEN` in the `BOT_TOKEN` variable with your actual bot token.
     *   Replace `https://your-mini-app-url.com` with the **public URL** of your web app (e.g., your `ngrok` URL for testing).
-
-The Python bot reads the same `.env.local` file for the token, so you only need to set the token there.
+    *   **IMPORTANT**: The token in this file MUST BE IDENTICAL to the one in `.env.local`. A mismatch will cause a `404 Not Found` error when the app tries to download files.
 
 ---
 
@@ -50,11 +50,11 @@ In your second terminal, you must run the Python script for the bot.
 
 #### **Python Environment Setup**
 
-Your development environment is managed by **Nix**. This means standard Python installation methods (`pip`, `venv`) will **fail**. The required Python packages (`python-telegram-bot`, `python-dotenv`) are already configured in your environment.
+Your development environment is managed by **Nix**. This means standard Python installation methods (`pip`, `venv`) will **fail**. The required Python packages (`python-telegram-bot`) are already configured in your environment.
 
 #### **Configure and Run the Bot Script**
 
-1.  **Set App URL in `bot.py`:** Open the `bot.py` file and replace the placeholder value for `MINI_APP_URL` with your actual **public** web app URL.
+1.  **Set App URL and Token in `bot.py`:** Open the `bot.py` file and replace the placeholder values for `MINI_APP_URL` and `BOT_TOKEN` with your actual **public** web app URL and your bot token.
 2.  **Run the bot:** Once the environment is correctly configured, run the bot using this command:
 
     ```bash

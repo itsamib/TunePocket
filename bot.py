@@ -1,19 +1,21 @@
 
 import logging
+import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 
 # --- Configuration ---
 # CRITICAL: The URL below MUST be a PUBLICLY ACCESSIBLE URL.
 # Private URLs from development environments like Cloud Workstations will NOT work
-# because Telegram cannot access them, resulting in a 401 Unauthorized error.
+# because Telegram cannot access them.
 #
 # FOR PRODUCTION: Replace this with your deployed web app's public URL.
 # FOR LOCAL TESTING: Use a tunneling service like ngrok to create a public URL
 # for your local server (e.g., http://localhost:9002) and paste the ngrok URL here.
 
-# IMPORTANT: Replace with your actual Bot Token from BotFather
-BOT_TOKEN = "8317334769:AAHHl5uEcSbcvBjwXdnDXLmBuN41RMTC_w0"
+# IMPORTANT: Replace with your actual Bot Token from BotFather. This MUST MATCH the
+# token in your .env.local file.
+BOT_TOKEN = "YOUR_HTTP_API_TOKEN"
 # IMPORTANT: Replace with your PUBLIC Mini App URL.
 MINI_APP_URL = "https://your-mini-app-url.com"
 # ---------------------
@@ -55,6 +57,8 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
 
     try:
+        # The start_param is a unique value that the Mini App will receive.
+        # It's used here to pass the file_id and the chat_id for sending a confirmation.
         start_param = f"{audio_file.file_id}_{chat_id}"
         app_url_with_param = f"{MINI_APP_URL}#tgWebAppStartParam={start_param}"
         
@@ -96,6 +100,7 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
 # --- Main Bot Function ---
 def main() -> None:
     """Starts the bot and runs it until Ctrl-C is pressed."""
+    # Security check to ensure placeholder values are replaced.
     if BOT_TOKEN == "YOUR_HTTP_API_TOKEN" or MINI_APP_URL == "https://your-mini-app-url.com":
         logger.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         logger.error("!!! BOT_TOKEN or MINI_APP_URL is not configured in bot.py !!!")
