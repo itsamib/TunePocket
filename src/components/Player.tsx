@@ -164,7 +164,7 @@ export default function Player({
                   <p className="text-sm text-white/60">{currentSong.album}</p>
               </SheetHeader>
 
-              <div className="flex flex-col items-center gap-8 py-8">
+              <div className="flex flex-col items-center gap-4 w-full">
                    <div className="w-full max-w-md">
                       <Slider
                           value={[progress]}
@@ -196,19 +196,19 @@ export default function Player({
                           {renderRepeatIcon()}
                       </Button>
                   </div>
-              </div>
 
-              <div className="flex items-center gap-2 w-full max-w-xs mx-auto shrink-0 pb-4">
-                  <Button variant="ghost" size="icon" onClick={() => setIsMuted(!isMuted)} className="text-white/80">
-                      {isMuted || volume === 0 ? <VolumeX /> : <Volume2 />}
-                  </Button>
-                  <Slider
-                  value={[isMuted ? 0 : volume]}
-                  onValueChange={handleVolumeChange}
-                  max={1}
-                  step={0.05}
-                  className="[&>span:first-child]:h-1 [&>span>span]:h-1 [&>span>span:last-child]:bg-white/50 [&>span>span>span]:bg-white"
-                  />
+                  <div className="flex items-center gap-2 w-full max-w-xs mx-auto shrink-0">
+                      <Button variant="ghost" size="icon" onClick={() => setIsMuted(!isMuted)} className="text-white/80">
+                          {isMuted || volume === 0 ? <VolumeX /> : <Volume2 />}
+                      </Button>
+                      <Slider
+                      value={[isMuted ? 0 : volume]}
+                      onValueChange={handleVolumeChange}
+                      max={1}
+                      step={0.05}
+                      className="[&>span:first-child]:h-1 [&>span>span]:h-1 [&>span>span:last-child]:bg-white/50 [&>span>span>span]:bg-white"
+                      />
+                  </div>
               </div>
           </div>
         </SheetContent>
