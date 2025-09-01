@@ -157,21 +157,21 @@ export default function Player({
           />
           <div className="absolute inset-0 bg-black/70" />
           
-          <div className="relative z-10 flex flex-col h-full p-6">
+          <div className="relative z-10 flex flex-col h-full p-6 justify-end">
               <SheetHeader className="text-left shrink-0">
                   <SheetTitle className="font-headline text-3xl">{currentSong.title}</SheetTitle>
                   <SheetDescription className="text-white/80">{currentSong.artist}</SheetDescription>
                   <p className="text-sm text-white/60">{currentSong.album}</p>
               </SheetHeader>
 
-              <div className="flex-grow flex flex-col justify-center items-center gap-8">
+              <div className="flex flex-col items-center gap-8 py-8">
                    <div className="w-full max-w-md">
                       <Slider
                           value={[progress]}
                           onValueChange={handleSeek}
                           max={100}
                           step={1}
-                          className="[&>span:first-child]:h-1 [&>span>span]:h-1 [&>span:last-child]:bg-white"
+                          className="[&>span:first-child]:h-1 [&>span>span]:h-1 [&>span>span:last-child]:bg-white/50 [&>span>span>span]:bg-white"
                       />
                       <div className="flex justify-between items-center text-xs mt-2 text-white/80">
                           <span>{formatTime(currentTime)}</span>
@@ -207,7 +207,7 @@ export default function Player({
                   onValueChange={handleVolumeChange}
                   max={1}
                   step={0.05}
-                  className="[&>span:first-child]:h-1 [&>span>span]:h-1 [&>span:last-child]:bg-white"
+                  className="[&>span:first-child]:h-1 [&>span>span]:h-1 [&>span>span:last-child]:bg-white/50 [&>span>span>span]:bg-white"
                   />
               </div>
           </div>
