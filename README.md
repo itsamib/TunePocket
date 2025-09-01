@@ -61,13 +61,8 @@ To run the bot, you **MUST** configure your Nix environment correctly.
 
     You should see a log message confirming the bot is running. If you still get a `command not found` error, it means the Nix environment setup (Step 2) was not successful.
 
-git push https://<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>@github.com/<itsamib>/<TunePocket>.git
 
 git remote add origin https://github.com/itsamib/TunePocket.git
-
-git remote add origin https://<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>@github.com/itsamib/TunePocket.git
-
-git push https://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@github.com/itsamib/TunePocket.git
 
 
 git remote add origin 
