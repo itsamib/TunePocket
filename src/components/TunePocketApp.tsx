@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { addSong, getSongs, initDB } from '@/lib/db';
+import { addSong, getSongs, initDB, updateSong } from '@/lib/db';
 import { getTelegramFile } from '@/ai/flows/get-telegram-file';
 import { sendTelegramMessage } from '@/ai/flows/send-telegram-message';
-import type { Song, SongGroup, StoredSong } from '@/types';
+import type { Song, SongGroup, StoredSong, EditableSongData } from '@/types';
 import Player from './Player';
 import { SongList } from './SongList';
 import { FileUpload } from './FileUpload';
+import { EditSongDialog } from './EditSongDialog';
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
@@ -24,6 +25,7 @@ export default function TunePocketApp() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [processingMessage, setProcessingMessage] = useState('Initializing...');
+  const [editingSong, setEditingSong] = useState<Song | null>(null);
   const { toast } = useToast();
 
   const processAndSaveSong = useCallback(async (file: Blob, defaultTitle: string): Promise<Song | null> => {
@@ -33,7 +35,6 @@ export default function TunePocketApp() {
     
     setProcessingMessage('Reading metadata...');
     
-    // Polyfill Buffer for music-metadata-browser in some environments
     if (typeof window !== 'undefined' && typeof (window as any).Buffer === 'undefined') {
         (window as any).Buffer = Buffer;
     }
@@ -220,6 +221,32 @@ export default function TunePocketApp() {
         setProcessingMessage('');
     }
   }, [processAndSaveSong, toast]);
+  
+  const handleUpdateSong = useCallback(async (updatedData: EditableSongData) => {
+    if (!editingSong) return;
+
+    try {
+      await updateSong(editingSong.id, updatedData);
+
+      // Update the song in the local state
+      setSongs(prevSongs =>
+        prevSongs.map(s =>
+          s.id === editingSong.id ? { ...s, ...updatedData } : s
+        )
+      );
+      
+      // If the currently playing song is the one being edited, update it as well
+      if(currentSong?.id === editingSong.id) {
+          setCurrentSong(prev => prev ? { ...prev, ...updatedData } : null);
+      }
+
+      toast({ title: "Song Updated", description: "The song details have been saved." });
+    } catch (error) {
+      console.error("Failed to update song:", error);
+      toast({ title: "Update Failed", description: "Could not save the changes.", variant: "destructive" });
+    }
+  }, [editingSong, toast, currentSong?.id]);
+
 
   const handlePlayPause = () => {
     if (currentSong) {
@@ -232,6 +259,10 @@ export default function TunePocketApp() {
     setIsPlaying(true);
   };
   
+  const handleEditSong = (song: Song) => {
+    setEditingSong(song);
+  };
+
   const playNext = useCallback(() => {
     if (!currentSong || songs.length === 0) return;
     const currentIndex = songs.findIndex(s => s.id === currentSong.id);
@@ -304,12 +335,27 @@ export default function TunePocketApp() {
        <main className="flex-grow overflow-hidden">
         <ScrollArea className="h-full">
             <div className="p-4 space-y-4">
-                <SongList groupedSongs={groupedSongs} onSelectSong={handleSelectSong} currentSong={currentSong} />
+                <SongList 
+                  groupedSongs={groupedSongs} 
+                  onSelectSong={handleSelectSong} 
+                  onEditSong={handleEditSong}
+                  currentSong={currentSong} 
+                />
                 <Separator />
-                <FileUpload onFileSelect={handleManualUpload} isLoading={isLoading && !!processingMessage} />
+                <FileUpload 
+                  onFileSelect={handleManualUpload} 
+                  isLoading={isLoading && !!processingMessage}
+                  accept="audio/mpeg,audio/m4a,audio/wav,audio/ogg,audio/flac"
+                />
             </div>
         </ScrollArea>
        </main>
+       <EditSongDialog
+        isOpen={!!editingSong}
+        onClose={() => setEditingSong(null)}
+        song={editingSong}
+        onSave={handleUpdateSong}
+      />
       <div className="pb-36" /> {/* Spacer for player */}
       <Player 
         currentSong={currentSong} 

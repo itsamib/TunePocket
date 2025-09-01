@@ -2,16 +2,17 @@
 
 import { Song, SongGroup } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Music, User, Library, PlayCircle, BarChartHorizontal, Disc } from 'lucide-react';
+import { Music, User, Library, PlayCircle, BarChartHorizontal, Disc, Pencil } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 
 interface SongListProps {
   groupedSongs: SongGroup;
   onSelectSong: (song: Song) => void;
+  onEditSong: (song: Song) => void;
   currentSong: Song | null;
 }
 
-export function SongList({ groupedSongs, onSelectSong, currentSong }: SongListProps) {
+export function SongList({ groupedSongs, onSelectSong, onEditSong, currentSong }: SongListProps) {
   if (Object.keys(groupedSongs).length === 0) {
     return (
         <div className="text-center text-muted-foreground p-8">
@@ -24,14 +25,14 @@ export function SongList({ groupedSongs, onSelectSong, currentSong }: SongListPr
   return (
     <div>
       <h2 className="text-2xl font-headline font-bold mb-4 flex items-center gap-2"><Library /> My Library</h2>
-      <Accordion type="multiple" className="w-full">
+      <Accordion type="multiple" className="w-full" defaultValue={Object.keys(groupedSongs)}>
         {Object.keys(groupedSongs).sort().map(genre => (
           <AccordionItem value={genre} key={genre}>
             <AccordionTrigger className="font-headline text-lg flex items-center gap-2 text-primary hover:no-underline">
               <Music className="w-5 h-5"/> {genre}
             </AccordionTrigger>
             <AccordionContent>
-              <Accordion type="multiple" className="w-full pl-4">
+              <Accordion type="multiple" className="w-full pl-4" defaultValue={Object.keys(groupedSongs[genre])}>
                 {Object.keys(groupedSongs[genre]).sort().map(artist => (
                   <AccordionItem value={`${genre}-${artist}`} key={`${genre}-${artist}`}>
                      <AccordionTrigger className="font-semibold flex items-center gap-2 text-accent hover:no-underline">
@@ -46,7 +47,7 @@ export function SongList({ groupedSongs, onSelectSong, currentSong }: SongListPr
                                 </h5>
                                 <ul className="space-y-1 pt-1 pl-4">
                                   {groupedSongs[genre][artist][album].map(song => (
-                                    <li key={song.id}>
+                                    <li key={song.id} className="flex items-center gap-2">
                                       <Button
                                         variant={currentSong?.id === song.id ? "secondary" : "ghost"}
                                         className={`w-full justify-start h-auto py-2 ${currentSong?.id === song.id ? 'font-bold' : ''}`}
@@ -58,6 +59,9 @@ export function SongList({ groupedSongs, onSelectSong, currentSong }: SongListPr
                                           <PlayCircle className="w-4 h-4 mr-2" />
                                         )}
                                         <span className="truncate">{song.title}</span>
+                                      </Button>
+                                      <Button variant="ghost" size="icon" className="shrink-0" onClick={() => onEditSong(song)}>
+                                        <Pencil className="w-4 h-4 text-muted-foreground"/>
                                       </Button>
                                     </li>
                                   ))}

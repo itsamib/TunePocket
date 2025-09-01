@@ -1,5 +1,5 @@
 'use client';
-import type { Song, StoredSong } from '@/types';
+import type { Song, StoredSong, EditableSongData } from '@/types';
 
 const DB_NAME = 'MusicDB';
 const DB_VERSION = 1;
@@ -63,7 +63,6 @@ export const addSong = (song: Omit<StoredSong, 'id'>): Promise<number> => {
         const transaction = currentDb.transaction([STORE_NAME], 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
         
-        // The song object now contains ArrayBuffers which are storable.
         const request = store.add(song);
 
         request.onsuccess = () => {
@@ -101,4 +100,46 @@ export const getSongs = (): Promise<StoredSong[]> => {
         reject(error);
     }
   });
+};
+
+export const updateSong = (id: number, dataToUpdate: EditableSongData): Promise<void> => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const currentDb = await initDBInternal();
+            const transaction = currentDb.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            
+            const getRequest = store.get(id);
+
+            getRequest.onerror = () => {
+                reject(getRequest.error);
+            };
+
+            getRequest.onsuccess = () => {
+                const songData = getRequest.result as StoredSong;
+                if (!songData) {
+                    return reject(new Error(`Song with id ${id} not found.`));
+                }
+
+                // Update the fields
+                songData.title = dataToUpdate.title;
+                songData.artist = dataToUpdate.artist;
+                songData.album = dataToUpdate.album;
+                songData.genre = dataToUpdate.genre;
+                
+                const updateRequest = store.put(songData);
+
+                updateRequest.onerror = () => {
+                    reject(updateRequest.error);
+                };
+                
+                updateRequest.onsuccess = () => {
+                    resolve();
+                };
+            };
+
+        } catch (error) {
+            reject(error);
+        }
+    });
 };

@@ -1,32 +1,26 @@
 import type * as Iid3 from 'music-metadata-browser';
 
-// This interface is for the data being passed around in the client-side state (React state).
-// It uses a Blob for easy creation of object URLs for the audio player.
-export interface Song {
-  id: number;
+export interface EditableSongData {
   title: string;
   artist: string;
   album: string;
   genre: string;
+}
+
+export interface Song extends EditableSongData {
+  id: number;
   fileBlob: Blob; // Used for playback
   localURL: string;
   duration: number;
-  artwork?: Iid3.IPicture; // This is a complex object, suitable for client-side only
+  artwork?: Iid3.IPicture; 
   contentType: string;
 }
 
-// This interface represents the actual data structure stored in IndexedDB.
-// It only contains serializable data types.
-// This is also the shape of the data that is safe to pass from server to client.
-export interface StoredSong {
+export interface StoredSong extends EditableSongData {
   id: number;
-  title: string;
-  artist: string;
-  album: string;
-  genre: string;
-  fileBlob: ArrayBuffer; // Stored as ArrayBuffer
+  fileBlob: ArrayBuffer; 
   duration: number;
-  artwork?: { // Artwork is stored as a plain object
+  artwork?: {
     data: ArrayBuffer;
     format: string;
   };
