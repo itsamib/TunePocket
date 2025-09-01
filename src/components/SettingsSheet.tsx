@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import {
   Sheet,
@@ -34,6 +34,12 @@ export function SettingsSheet({
   onTabConfigChange,
 }: SettingsSheetProps) {
   const [isTabSettingsOpen, setIsTabSettingsOpen] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
 
   return (
     <>
@@ -63,13 +69,15 @@ export function SettingsSheet({
         </SheetContent>
       </Sheet>
       
-      {/* This component will only be rendered on the client side */}
-      <TabSettingsDialog
-        isOpen={isTabSettingsOpen}
-        onClose={() => setIsTabSettingsOpen(false)}
-        tabConfig={tabConfig}
-        onSave={onTabConfigChange}
-      />
+      {/* This component will only be rendered on the client side after mounting */}
+      {hasMounted && (
+        <TabSettingsDialog
+          isOpen={isTabSettingsOpen}
+          onClose={() => setIsTabSettingsOpen(false)}
+          tabConfig={tabConfig}
+          onSave={onTabConfigChange}
+        />
+      )}
     </>
   );
 }
