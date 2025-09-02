@@ -49,6 +49,8 @@ export default function TunePocketApp() {
 
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const touchStartRef = useRef<number | null>(null);
+
 
   const processAndSaveSong = useCallback(async (file: Blob, defaultTitle: string): Promise<Song | null> => {
     if (file.size > 50 * 1024 * 1024) { // 50MB limit
@@ -522,6 +524,34 @@ export default function TunePocketApp() {
         tg.offEvent('themeChanged', themeChangedHandler);
     }
   }, [tg]);
+  
+  const handleTouchStart = (e: React.TouchEvent) => {
+    // Only care about the first touch
+    if (e.touches.length === 1) {
+      touchStartRef.current = e.touches[0].clientX;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartRef.current === null || e.touches.length > 1) {
+      return;
+    }
+
+    const touchCurrentX = e.touches[0].clientX;
+    const swipeDistance = touchCurrentX - touchStartRef.current;
+    
+    // Check if swipe starts from the left edge and moves right
+    if (touchStartRef.current < 20 && swipeDistance > 100) {
+      setIsSettingsOpen(true);
+      // Reset after gesture is triggered
+      touchStartRef.current = null; 
+    }
+  };
+
+  const handleTouchEnd = () => {
+    // Reset on touch end
+    touchStartRef.current = null;
+  };
 
   if (isLoading && !songs.length && processingMessage) {
     return (
@@ -534,7 +564,12 @@ export default function TunePocketApp() {
   }
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-background text-foreground">
+    <div 
+      className="h-screen w-screen flex flex-col bg-background text-foreground"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
        <header className="p-2 border-b flex items-center justify-between">
          <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)}>
             <Menu />

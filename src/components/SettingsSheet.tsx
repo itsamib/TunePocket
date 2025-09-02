@@ -10,7 +10,7 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet';
 import { Button } from './ui/button';
-import { Settings, SlidersHorizontal } from 'lucide-react';
+import { Menu, SlidersHorizontal } from 'lucide-react';
 import type { TabConfig } from '@/types';
 
 // Dynamically import TabSettingsDialog with SSR disabled
@@ -41,7 +41,7 @@ export function SettingsSheet({
         <SheetContent side="left">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
-              <Settings /> Settings
+              <Menu /> Menu
             </SheetTitle>
             <SheetDescription>
               Customize your TunePocket experience.
