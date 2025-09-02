@@ -14,10 +14,10 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 # for your local server (e.g., http://localhost:9002) and paste the ngrok URL here.
 
 # IMPORTANT: Replace with your actual Bot Token from BotFather. This MUST MATCH the
-# token in your .env.local file.
-BOT_TOKEN = "YOUR_HTTP_API_TOKEN"
+# token in your .nv.local file.
+BOT_TOKEN = "8317334769:AAG1uFkrsdXwoyAyYH0YgL189eeWOcal4d8"
 # IMPORTANT: Replace with your PUBLIC Mini App URL.
-MINI_APP_URL = "https://your-mini-app-url.com"
+MINI_APP_URL = "https://9000-firebase-studio-1756580205727.cluster-64pjnskmlbaxowh5lzq6i7v4ra.cloudworkstations.dev"
 
 # In-memory storage for the last 5 added songs (for demonstration purposes)
 # In a production scenario, you'd use a database.
