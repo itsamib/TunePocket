@@ -49,7 +49,7 @@ export default function TunePocketApp() {
 
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const touchStartRef = useRef<number | null>(null);
+  const touchStartRef = useRef<{x: number, y: number} | null>(null);
 
 
   const processAndSaveSong = useCallback(async (file: Blob, defaultTitle: string): Promise<Song | null> => {
@@ -526,31 +526,31 @@ export default function TunePocketApp() {
   }, [tg]);
   
   const handleTouchStart = (e: React.TouchEvent) => {
-    // Only care about the first touch
     if (e.touches.length === 1) {
-      touchStartRef.current = e.touches[0].clientX;
+      touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     }
   };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStartRef.current === null || e.touches.length > 1) {
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStartRef.current || e.touches.length > 0) {
       return;
     }
 
-    const touchCurrentX = e.touches[0].clientX;
-    const swipeDistance = touchCurrentX - touchStartRef.current;
-    
-    // Check if swipe starts from the left edge and moves right
-    if (touchStartRef.current < 20 && swipeDistance > 100) {
+    const touchEndX = e.changedTouches[0].clientX;
+    const swipeDistance = touchEndX - touchStartRef.current.x;
+
+    // Open sidebar on swipe from left edge
+    if (touchStartRef.current.x < 20 && swipeDistance > 100) {
       setIsSettingsOpen(true);
-      // Reset after gesture is triggered
-      touchStartRef.current = null; 
     }
+    
+    touchStartRef.current = null;
   };
 
-  const handleTouchEnd = () => {
-    // Reset on touch end
-    touchStartRef.current = null;
+  const handleTouchMove = (e: React.TouchEvent) => {
+    // This is primarily for preventing default browser actions if needed,
+    // but for our simple gesture, we can do most logic in onTouchEnd.
+    // We keep the touch move logic light.
   };
 
   if (isLoading && !songs.length && processingMessage) {

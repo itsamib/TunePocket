@@ -49,32 +49,29 @@ export default function Player({
 
 
   const resetControlsTimeout = useCallback(() => {
+    setShowControls(true);
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current);
     }
     controlsTimeoutRef.current = setTimeout(() => {
       setShowControls(false);
-    }, 5000); // Hide after 5 seconds
+    }, 5000);
   }, []);
 
-  const handleToggleControls = () => {
-    setShowControls(true);
+  const handleInteraction = useCallback(() => {
     resetControlsTimeout();
-  };
+  }, [resetControlsTimeout]);
 
   useEffect(() => {
     if (isSheetOpen) {
-      handleToggleControls(); // Show controls and start timer when sheet opens
-    } else if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current); // Clear timer when sheet closes
+      handleInteraction();
     }
-
     return () => {
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current);
       }
     };
-  }, [isSheetOpen, resetControlsTimeout, handleToggleControls]);
+  }, [isSheetOpen, handleInteraction]);
 
 
   useEffect(() => {
@@ -146,14 +143,17 @@ export default function Player({
   const duration = currentSong?.duration ?? 0;
 
   const renderRepeatIcon = () => {
-    const iconColor = showControls ? colorPalette?.LightVibrant?.hex || '#FFF' : '#FFF';
+    const iconColor = showControls ? (colorPalette?.LightVibrant?.hex || '#FFF') : '#FFF';
+    const activeColor = colorPalette?.LightVibrant?.hex || '#FFF';
+    const inactiveColor = colorPalette?.Muted?.hex || '#AAA';
+
     switch (repeatMode) {
-      case 'one':
-        return <Repeat1 style={{ color: iconColor }} />;
-      case 'all':
-        return <Repeat style={{ color: iconColor }} />;
-      default:
-        return <Repeat />;
+        case 'one':
+            return <Repeat1 style={{ color: activeColor }} />;
+        case 'all':
+            return <Repeat style={{ color: activeColor }} />;
+        default:
+            return <Repeat style={{ color: inactiveColor }} />;
     }
   };
 
@@ -227,96 +227,96 @@ export default function Player({
           className="h-screen p-0 flex flex-col border-none text-white overflow-hidden" 
           style={{background: dynamicStyles.background}}
         >
-            <div 
-              className={cn(
-                "absolute inset-0 z-[-2] bg-cover bg-center transition-all duration-500",
-                showControls ? 'scale-110' : 'scale-100'
-              )} 
-              style={{ backgroundImage: artworkUrl ? `url(${artworkUrl})` : 'none' }}
-            />
-            <div 
-              className={cn(
-                "absolute inset-0 z-[-1] bg-black/60 transition-all duration-500",
-                showControls ? "backdrop-blur-sm" : "backdrop-blur-none"
-              )} 
-            />
+          <div 
+            className="absolute inset-0 z-[-2] bg-cover bg-center transition-transform duration-500"
+            style={{ 
+              backgroundImage: artworkUrl ? `url(${artworkUrl})` : 'none',
+              transform: showControls ? 'scale(1.1)' : 'scale(1)',
+            }} 
+          />
+          <div 
+            className={cn(
+              "absolute inset-0 z-[-1] bg-black/60 transition-all duration-500",
+              showControls ? "backdrop-blur-sm" : "backdrop-blur-none"
+            )} 
+          />
           
-            <div 
-                className="relative z-10 flex flex-col h-full justify-between"
-                onClick={handleToggleControls}
-                onTouchStart={handleTouchStart}
-                onTouchEnd={handleTouchEnd}
-            >
-                <div 
-                  className={cn(
-                    "absolute top-0 left-0 right-0 p-6 transition-opacity duration-300",
-                    showControls ? "opacity-100" : "opacity-0"
-                  )}
-                >
-                    <SheetClose className="absolute right-4 top-4 z-20 rounded-full bg-black/30 p-1 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
-                        <X className="h-6 w-6" style={{color: dynamicStyles.color}}/>
-                        <span className="sr-only">Close</span>
-                    </SheetClose>
-                    <SheetHeader className="text-left shrink-0 pt-8">
-                        <SheetTitle className="font-headline text-3xl" style={{color: dynamicStyles.color}}>{currentSong.title}</SheetTitle>
-                        <SheetDescription style={{color: colorPalette?.LightMuted?.hex || '#CCC'}}>{currentSong.artist}</SheetDescription>
-                        <p className="text-sm" style={{color: colorPalette?.Muted?.hex || '#AAA'}}>{currentSong.album}</p>
-                    </SheetHeader>
-                </div>
-              
-
+          <div 
+              className="relative z-10 flex flex-col h-full justify-between"
+              onClick={handleInteraction}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+          >
               <div 
                 className={cn(
-                  "absolute bottom-0 left-0 right-0 p-6 flex flex-col items-center gap-4 w-full transition-opacity duration-300",
-                   showControls ? "opacity-100" : "opacity-0 pointer-events-none"
+                  "absolute top-0 left-0 right-0 p-6 transition-opacity duration-300",
+                  showControls ? "opacity-100" : "opacity-0"
                 )}
               >
-                   <div className="w-full max-w-md">
-                      <Slider
-                          value={[progress]}
-                          onValueChange={handleSeek}
-                          max={100}
-                          step={1}
-                          className="[&>span:first-child]:h-1"
-                      />
-                      <div className="flex justify-between items-center text-xs mt-2" style={{color: dynamicStyles.color}}>
-                          <span>{formatTime(currentTime)}</span>
-                          <span>{formatTime(duration)}</span>
-                      </div>
-                  </div>
-
-                  <div className="flex items-center justify-center gap-2 w-full">
-                      <Button variant="ghost" size="icon" onClick={onToggleShuffle} className="h-14 w-14">
-                          <Shuffle style={{ color: isShuffle ? (colorPalette?.LightVibrant?.hex || '#FFF') : (colorPalette?.Muted?.hex || '#AAA') }} />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={onPrev} className="h-14 w-14">
-                          <SkipBack size={28} style={{ color: dynamicStyles.color }}/>
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={onPlayPause} className="w-20 h-20 rounded-full border border-white/50 bg-white/10 hover:bg-white/20">
-                          {isLoading ? <Loader2 className="animate-spin" /> : isPlaying ? <Pause size={40} style={{ color: dynamicStyles.color }}/> : <Play size={40} style={{ color: dynamicStyles.color }}/>}
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={onNext} className="h-14 w-14">
-                          <SkipForward size={28} style={{ color: dynamicStyles.color }}/>
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={onCycleRepeatMode} className="h-14 w-14">
-                          {renderRepeatIcon()}
-                      </Button>
-                  </div>
-
-                  <div className="flex items-center gap-2 w-full max-w-xs mx-auto shrink-0">
-                      <Button variant="ghost" size="icon" onClick={() => setIsMuted(!isMuted)}>
-                          {isMuted || volume === 0 ? <VolumeX style={{color: dynamicStyles.color}}/> : <Volume2 style={{color: dynamicStyles.color}}/>}
-                      </Button>
-                      <Slider
-                        value={[isMuted ? 0 : volume]}
-                        onValueChange={handleVolumeChange}
-                        max={1}
-                        step={0.05}
-                        className="[&>span:first-child]:h-1"
-                      />
-                  </div>
+                  <SheetClose className="absolute right-4 top-4 z-20 rounded-full bg-black/30 p-1 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
+                      <X className="h-6 w-6" style={{color: dynamicStyles.color}}/>
+                      <span className="sr-only">Close</span>
+                  </SheetClose>
+                  <SheetHeader className="text-left shrink-0 pt-8">
+                      <SheetTitle className="font-headline text-3xl" style={{color: dynamicStyles.color}}>{currentSong.title}</SheetTitle>
+                      <SheetDescription style={{color: colorPalette?.LightMuted?.hex || '#CCC'}}>{currentSong.artist}</SheetDescription>
+                      <p className="text-sm" style={{color: colorPalette?.Muted?.hex || '#AAA'}}>{currentSong.album}</p>
+                  </SheetHeader>
               </div>
+            
+
+            <div 
+              className={cn(
+                "absolute bottom-0 left-0 right-0 p-6 flex flex-col items-center gap-4 w-full transition-opacity duration-300",
+                  showControls ? "opacity-100" : "opacity-0 pointer-events-none"
+              )}
+            >
+                  <div className="w-full max-w-md">
+                    <Slider
+                        value={[progress]}
+                        onValueChange={handleSeek}
+                        max={100}
+                        step={1}
+                        className="[&>span:first-child]:h-1"
+                    />
+                    <div className="flex justify-between items-center text-xs mt-2" style={{color: dynamicStyles.color}}>
+                        <span>{formatTime(currentTime)}</span>
+                        <span>{formatTime(duration)}</span>
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-center gap-2 w-full">
+                    <Button variant="ghost" size="icon" onClick={onToggleShuffle} className="h-14 w-14">
+                        <Shuffle style={{ color: isShuffle ? (colorPalette?.LightVibrant?.hex || '#FFF') : (colorPalette?.Muted?.hex || '#AAA') }} />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={onPrev} className="h-14 w-14">
+                        <SkipBack size={28} style={{ color: dynamicStyles.color }}/>
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={onPlayPause} className="w-20 h-20 rounded-full border border-white/50 bg-white/10 hover:bg-white/20">
+                        {isLoading ? <Loader2 className="animate-spin" /> : isPlaying ? <Pause size={40} style={{ color: dynamicStyles.color }}/> : <Play size={40} style={{ color: dynamicStyles.color }}/>}
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={onNext} className="h-14 w-14">
+                        <SkipForward size={28} style={{ color: dynamicStyles.color }}/>
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={onCycleRepeatMode} className="h-14 w-14">
+                        {renderRepeatIcon()}
+                    </Button>
+                </div>
+
+                <div className="flex items-center gap-2 w-full max-w-xs mx-auto shrink-0">
+                    <Button variant="ghost" size="icon" onClick={() => setIsMuted(!isMuted)}>
+                        {isMuted || volume === 0 ? <VolumeX style={{color: dynamicStyles.color}}/> : <Volume2 style={{color: dynamicStyles.color}}/>}
+                    </Button>
+                    <Slider
+                      value={[isMuted ? 0 : volume]}
+                      onValueChange={handleVolumeChange}
+                      max={1}
+                      step={0.05}
+                      className="[&>span:first-child]:h-1"
+                    />
+                </div>
             </div>
+          </div>
         </SheetContent>
       </Sheet>
     </>
