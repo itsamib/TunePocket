@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetClose } from '@/components/ui/sheet';
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Music, Loader2, Shuffle, Repeat, Repeat1, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Progress } from './ui/progress';
@@ -21,7 +21,7 @@ interface PlayerProps {
   onToggleShuffle: () => void;
   repeatMode: 'none' | 'one' | 'all';
   onCycleRepeatMode: () => void;
-  telegramUser?: any; // Keep this optional as it might not be available
+  telegramUser?: any;
 }
 
 export default function Player({ 
@@ -37,12 +37,42 @@ export default function Player({
     onCycleRepeatMode,
 }: PlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
+  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [progress, setProgress] = useState(0);
   const [volume, setVolume] = useState(0.75);
   const [isMuted, setIsMuted] = useState(false);
   const [artworkUrl, setArtworkUrl] = useState<string | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [colorPalette, setColorPalette] = useState<any>(null);
+  const [showControls, setShowControls] = useState(true);
+
+  const resetControlsTimeout = useCallback(() => {
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+    }
+    controlsTimeoutRef.current = setTimeout(() => {
+      setShowControls(false);
+    }, 5000); // Hide after 5 seconds
+  }, []);
+
+  const handleToggleControls = () => {
+    setShowControls(true);
+    resetControlsTimeout();
+  };
+
+  useEffect(() => {
+    if (isSheetOpen) {
+      handleToggleControls(); // Show controls and start timer when sheet opens
+    } else if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current); // Clear timer when sheet closes
+    }
+
+    return () => {
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+    };
+  }, [isSheetOpen, resetControlsTimeout]);
 
 
   useEffect(() => {
@@ -68,7 +98,6 @@ export default function Player({
       const url = URL.createObjectURL(blob);
       setArtworkUrl(url);
 
-      // Color extraction
       if (window.Vibrant) {
           window.Vibrant.from(url).getPalette().then((palette: any) => {
               setColorPalette(palette);
@@ -115,11 +144,12 @@ export default function Player({
   const duration = currentSong?.duration ?? 0;
 
   const renderRepeatIcon = () => {
+    const iconColor = showControls ? colorPalette?.LightVibrant?.hex || '#FFF' : '#FFF';
     switch (repeatMode) {
       case 'one':
-        return <Repeat1 style={{ color: colorPalette?.LightVibrant?.hex || '#FFF' }} />;
+        return <Repeat1 style={{ color: iconColor }} />;
       case 'all':
-        return <Repeat style={{ color: colorPalette?.LightVibrant?.hex || '#FFF' }} />;
+        return <Repeat style={{ color: iconColor }} />;
       default:
         return <Repeat />;
     }
@@ -130,16 +160,6 @@ export default function Player({
       ? `linear-gradient(135deg, ${colorPalette.DarkMuted?.hex || '#111'}, ${colorPalette.DarkVibrant?.hex || '#000'})`
       : 'linear-gradient(135deg, #111, #000)',
     color: colorPalette?.LightVibrant?.hex || '#FFF',
-    sliderThumb: {
-        borderColor: colorPalette?.Vibrant?.hex || 'var(--primary)',
-        backgroundColor: colorPalette?.DarkMuted?.hex || 'var(--background)'
-    },
-    sliderTrack: {
-        backgroundColor: colorPalette?.Vibrant?.hex || 'var(--primary)'
-    },
-    sliderBg: {
-        backgroundColor: colorPalette?.Muted?.hex || 'var(--secondary)'
-    }
   };
   
   if (!currentSong) return null;
@@ -184,22 +204,51 @@ export default function Player({
             </div>
             <Progress value={progress} className="h-1 w-full rounded-none" />
         </div>
-        <SheetContent side="bottom" className="h-screen p-0 flex flex-col border-none text-white" style={dynamicStyles}>
-            <SheetClose className="absolute right-4 top-4 z-20 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
-                <X className="h-6 w-6" style={{color: dynamicStyles.color}}/>
-                <span className="sr-only">Close</span>
-            </SheetClose>
-            <div className="absolute inset-0 z-[-2] bg-cover bg-center" style={{ backgroundImage: artworkUrl ? `url(${artworkUrl})` : 'none' }}/>
-            <div className="absolute inset-0 z-[-1] bg-black/70 backdrop-blur-xl" />
+        <SheetContent 
+          side="bottom" 
+          className="h-screen p-0 flex flex-col border-none text-white overflow-hidden" 
+          style={{background: dynamicStyles.background}}
+          onClick={handleToggleControls}
+        >
+            <div 
+              className={cn(
+                "absolute inset-0 z-[-2] bg-cover bg-center transition-all duration-500",
+                showControls ? 'scale-110' : 'scale-100'
+              )} 
+              style={{ backgroundImage: artworkUrl ? `url(${artworkUrl})` : 'none' }}
+            />
+            <div 
+              className={cn(
+                "absolute inset-0 z-[-1] bg-black/60 transition-all duration-500",
+                showControls ? "backdrop-blur-sm" : "backdrop-blur-none"
+              )} 
+            />
           
-            <div className="relative z-10 flex flex-col h-full p-6 justify-between">
-              <SheetHeader className="text-left shrink-0">
-                  <SheetTitle className="font-headline text-3xl" style={{color: dynamicStyles.color}}>{currentSong.title}</SheetTitle>
-                  <SheetDescription style={{color: colorPalette?.LightMuted?.hex || '#CCC'}}>{currentSong.artist}</SheetDescription>
-                  <p className="text-sm" style={{color: colorPalette?.Muted?.hex || '#AAA'}}>{currentSong.album}</p>
-              </SheetHeader>
+            <div className="relative z-10 flex flex-col h-full justify-between">
+                <div 
+                  className={cn(
+                    "absolute top-0 left-0 right-0 p-6 transition-opacity duration-300",
+                    showControls ? "opacity-100" : "opacity-0"
+                  )}
+                >
+                    <SheetClose className="absolute right-4 top-4 z-20 rounded-full bg-black/30 p-1 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
+                        <X className="h-6 w-6" style={{color: dynamicStyles.color}}/>
+                        <span className="sr-only">Close</span>
+                    </SheetClose>
+                    <SheetHeader className="text-left shrink-0 pt-8">
+                        <SheetTitle className="font-headline text-3xl" style={{color: dynamicStyles.color}}>{currentSong.title}</SheetTitle>
+                        <SheetDescription style={{color: colorPalette?.LightMuted?.hex || '#CCC'}}>{currentSong.artist}</SheetDescription>
+                        <p className="text-sm" style={{color: colorPalette?.Muted?.hex || '#AAA'}}>{currentSong.album}</p>
+                    </SheetHeader>
+                </div>
+              
 
-              <div className="flex flex-col items-center gap-4 w-full">
+              <div 
+                className={cn(
+                  "absolute bottom-0 left-0 right-0 p-6 flex flex-col items-center gap-4 w-full transition-opacity duration-300",
+                   showControls ? "opacity-100" : "opacity-0 pointer-events-none"
+                )}
+              >
                    <div className="w-full max-w-md">
                       <Slider
                           value={[progress]}
@@ -215,13 +264,13 @@ export default function Player({
                   </div>
 
                   <div className="flex items-center justify-center gap-2 w-full">
-                      <Button variant="ghost" size="icon" onClick={onToggleShuffle} className={cn('h-14 w-14', isShuffle && 'text-primary')}>
+                      <Button variant="ghost" size="icon" onClick={onToggleShuffle} className="h-14 w-14">
                           <Shuffle style={{ color: isShuffle ? (colorPalette?.LightVibrant?.hex || '#FFF') : (colorPalette?.Muted?.hex || '#AAA') }} />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={onPrev} className="h-14 w-14">
                           <SkipBack size={28} style={{ color: dynamicStyles.color }}/>
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={onPlayPause} className="w-20 h-20 rounded-full border border-white/50 hover:bg-white/10">
+                      <Button variant="ghost" size="icon" onClick={onPlayPause} className="w-20 h-20 rounded-full border border-white/50 bg-white/10 hover:bg-white/20">
                           {isLoading ? <Loader2 className="animate-spin" /> : isPlaying ? <Pause size={40} style={{ color: dynamicStyles.color }}/> : <Play size={40} style={{ color: dynamicStyles.color }}/>}
                       </Button>
                       <Button variant="ghost" size="icon" onClick={onNext} className="h-14 w-14">
@@ -245,7 +294,7 @@ export default function Player({
                       />
                   </div>
               </div>
-          </div>
+            </div>
         </SheetContent>
       </Sheet>
     </>
