@@ -2,21 +2,20 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { addSong, getSongs, initDB, updateSong, getPlaylists, addPlaylist, updatePlaylistSongs, deletePlaylist, deleteSong as dbDeleteSong } from '@/lib/db';
-import { getTelegramFile } from '@/app/actions/get-telegram-file';
-import { sendTelegramMessage } from '@/app/actions/send-telegram-message';
 import type { Song, SongGroup, StoredSong, EditableSongData, Playlist, TabConfig, SongWithId } from '@/types';
 import Player from './Player';
 import { SongList } from './SongList';
 import { EditSongDialog } from './EditSongDialog';
 import { AddToPlaylistDialog } from './AddToPlaylistDialog';
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Menu } from 'lucide-react';
+import { Loader2, Plus, Menu, Search, X } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { Button } from './ui/button';
 import { Buffer } from 'buffer';
 import * as mmb from 'music-metadata-browser';
 import { AddSongsToPlaylistDialog } from './AddSongsToPlaylistDialog';
 import { SettingsSheet } from './SettingsSheet';
+import { Input } from './ui/input';
 
 
 const DEFAULT_TABS: TabConfig[] = [
@@ -46,11 +45,12 @@ export default function TunePocketApp() {
   const [originalQueue, setOriginalQueue] = useState<Song[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [tabConfig, setTabConfig] = useState<TabConfig[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+
 
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const touchStartRef = useRef<{x: number, y: number} | null>(null);
-
 
   const processAndSaveSong = useCallback(async (file: Blob, defaultTitle: string): Promise<Song | null> => {
     if (file.size > 50 * 1024 * 1024) { // 50MB limit
@@ -71,7 +71,6 @@ export default function TunePocketApp() {
         const artist = metadata.common.artist || 'Unknown Artist';
         const album = metadata.common.album || 'Unknown Album';
 
-        // Check for duplicates before proceeding
         const isDuplicate = songs.some(song => 
             song.title.toLowerCase() === title.toLowerCase() &&
             song.artist.toLowerCase() === artist.toLowerCase() &&
@@ -125,62 +124,7 @@ export default function TunePocketApp() {
         console.error("Failed to process and save song:", error);
         throw error;
     }
-  }, [songs]); // Added songs dependency for duplicate check
-
-  const handleTelegramFile = useCallback(async (param: string) => {
-    setIsLoading(true);
-    let chatId: string | undefined;
-
-    try {
-        const parts = param.split('_');
-        const fileId = parts[0];
-        chatId = parts[1];
-
-        if (!fileId || !chatId) {
-            throw new Error('Invalid start parameter from Telegram.');
-        }
-
-        setProcessingMessage('Downloading from Telegram...');
-        const { fileBuffer, contentType, fileName } = await getTelegramFile({ fileId });
-
-        const buffer = Buffer.from(fileBuffer, 'base64');
-        const blob = new Blob([buffer], { type: contentType });
-      
-        const savedSong = await processAndSaveSong(blob, fileName);
-      
-        if (savedSong) {
-            toast({ title: "Song Added!", description: `"${savedSong.title}" by ${savedSong.artist} has been added.` });
-            
-            setProcessingMessage('Sending confirmation...');
-            await sendTelegramMessage({
-              chatId: chatId,
-              text: `✅ Song "${savedSong.title}" was successfully added to your TunePocket library!`,
-            });
-        }
-
-    } catch (error: any) {
-        console.error("Error handling Telegram file:", error);
-        toast({ title: "Processing Failed", description: error.message || "Could not process the song from Telegram.", variant: "destructive" });
-        if (chatId) {
-            try {
-                await sendTelegramMessage({
-                    chatId: chatId,
-                    text: `❌ Failed to add song to your library. Error: ${error.message}`,
-                });
-            } catch (sendError) {
-                console.error("Failed to send error confirmation:", sendError);
-            }
-        }
-    } finally {
-        setIsLoading(false);
-        setProcessingMessage('');
-        if (window.history.replaceState) {
-            const url = new URL(window.location.href);
-            url.hash = '';
-            window.history.replaceState({}, document.title, url.toString());
-        }
-    }
-  }, [processAndSaveSong, toast]);
+  }, [songs]);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -190,7 +134,6 @@ export default function TunePocketApp() {
       try {
         await initDB();
         
-        // Load Tab Configuration
         const savedTabs = localStorage.getItem('tunePocketTabConfig');
         if (savedTabs) {
             setTabConfig(JSON.parse(savedTabs));
@@ -226,36 +169,21 @@ export default function TunePocketApp() {
       } catch (error) {
         console.error('DB initialization or data loading failed', error);
         toast({ title: "Initialization Error", description: "Could not load the song library.", variant: "destructive" });
+      } finally {
         setIsLoading(false);
         setProcessingMessage('');
-        return; 
       }
 
-      let startParam: string | null = null;
       if (window.Telegram && window.Telegram.WebApp) {
           const telegramApp = window.Telegram.WebApp;
           telegramApp.ready();
           setTg(telegramApp);
           setUser(telegramApp.initDataUnsafe?.user);
-          startParam = telegramApp.initDataUnsafe?.start_param;
-      }
-      
-      if (!startParam && window.location.hash) {
-         const hashParams = new URLSearchParams(window.location.hash.substring(1));
-         startParam = hashParams.get('tgWebAppStartParam');
-      }
-
-      if (startParam) {
-          await handleTelegramFile(startParam);
-      } else {
-          setIsLoading(false);
-          setProcessingMessage('');
       }
     };
     
     initializeApp();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [toast]);
 
   const handleManualUpload = useCallback(async (file: File) => {
     setIsLoading(true);
@@ -300,10 +228,8 @@ export default function TunePocketApp() {
             const deletedSongTitle = songs.find(s => s.id === songId)?.title || "The song";
             await dbDeleteSong(songId);
 
-            // Update songs list
             setSongs(prevSongs => prevSongs.filter(s => s.id !== songId));
 
-            // Update playlists
             setPlaylists(prevPlaylists =>
                 prevPlaylists.map(p => ({
                     ...p,
@@ -311,7 +237,6 @@ export default function TunePocketApp() {
                 }))
             );
 
-            // If the deleted song was the current song, stop playback
             if (currentSong?.id === songId) {
                 setCurrentSong(null);
                 setIsPlaying(false);
@@ -389,7 +314,6 @@ export default function TunePocketApp() {
     if (file) {
       handleManualUpload(file);
     }
-    // Reset file input
     if (event.target) {
         event.target.value = '';
     }
@@ -451,9 +375,8 @@ export default function TunePocketApp() {
     
     if (nextIndex >= queue.length) {
         if (repeatMode === 'all') {
-            nextIndex = 0; // Loop back to the start
+            nextIndex = 0;
         } else {
-            // Stop playing if not repeating
             setIsPlaying(false);
             return;
         }
@@ -487,8 +410,20 @@ export default function TunePocketApp() {
     }
   }, [songs, isShuffle]);
 
+  const filteredSongs = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    if (!query) {
+      return songs;
+    }
+    return songs.filter(song => 
+      song.title.toLowerCase().includes(query) ||
+      song.artist.toLowerCase().includes(query) ||
+      song.album.toLowerCase().includes(query)
+    );
+  }, [songs, searchQuery]);
+
   const groupedSongs = useMemo(() => {
-    return songs.reduce<SongGroup>((acc, song) => {
+    return filteredSongs.reduce<SongGroup>((acc, song) => {
       const { genre, artist, album } = song;
       if (!acc[genre]) {
         acc[genre] = {};
@@ -502,7 +437,7 @@ export default function TunePocketApp() {
       acc[genre][artist][album].push(song);
       return acc;
     }, {});
-  }, [songs]);
+  }, [filteredSongs]);
   
   useEffect(() => {
     if (!tg) return;
@@ -539,7 +474,6 @@ export default function TunePocketApp() {
     const touchEndX = e.changedTouches[0].clientX;
     const swipeDistance = touchEndX - touchStartRef.current.x;
 
-    // Open sidebar on swipe from left edge
     if (touchStartRef.current.x < 20 && swipeDistance > 100) {
       setIsSettingsOpen(true);
     }
@@ -548,9 +482,6 @@ export default function TunePocketApp() {
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    // This is primarily for preventing default browser actions if needed,
-    // but for our simple gesture, we can do most logic in onTouchEnd.
-    // We keep the touch move logic light.
   };
 
   if (isLoading && !songs.length && processingMessage) {
@@ -580,8 +511,27 @@ export default function TunePocketApp() {
        <main className="flex-grow overflow-hidden">
         <ScrollArea className="h-full">
             <div className="p-4 space-y-4 pb-32">
+                <div className="relative">
+                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                   <Input 
+                     placeholder="Search songs, artists, albums..."
+                     value={searchQuery}
+                     onChange={(e) => setSearchQuery(e.target.value)}
+                     className="pl-10"
+                   />
+                   {searchQuery && (
+                     <Button
+                       variant="ghost"
+                       size="icon"
+                       className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7"
+                       onClick={() => setSearchQuery('')}
+                     >
+                       <X className="h-5 w-5 text-muted-foreground" />
+                     </Button>
+                   )}
+                </div>
                 <SongList 
-                  songs={songs}
+                  songs={filteredSongs}
                   groupedSongs={groupedSongs} 
                   playlists={playlists}
                   onSelectSong={handleSelectSong} 

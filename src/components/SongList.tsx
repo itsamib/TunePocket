@@ -6,14 +6,6 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { Music, User, Library, PlayCircle, BarChartHorizontal, Disc, Pencil, ListMusic, Columns3, MoreVertical, PlusCircle, Trash2, FolderPlus } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ScrollArea } from './ui/scroll-area';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +16,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
 import {
   Tooltip,
   TooltipContent,
@@ -108,9 +107,13 @@ const ArtistList = ({ songs, onSelectSong, onEditSong, onOpenAddToPlaylist, onDe
         }, {} as { [artist: string]: Song[] });
     }, [songs]);
 
+    const sortedArtists = Object.keys(artists).sort();
+
+    if (sortedArtists.length === 0) return <p className="text-center text-muted-foreground p-4">No artists found.</p>;
+
     return (
         <Accordion type="multiple" className="w-full">
-            {Object.keys(artists).sort().map(artist => (
+            {sortedArtists.map(artist => (
                 <AccordionItem value={artist} key={artist}>
                     <AccordionTrigger className="font-headline text-lg flex items-center gap-2 text-accent hover:no-underline">
                         <User className="w-5 h-5"/> {artist}
@@ -139,9 +142,13 @@ const AlbumList = ({ songs, onSelectSong, onEditSong, onOpenAddToPlaylist, onDel
         }, {} as { [album: string]: Song[] });
     }, [songs]);
 
+    const sortedAlbums = Object.keys(albums).sort();
+
+    if (sortedAlbums.length === 0) return <p className="text-center text-muted-foreground p-4">No albums found.</p>;
+
     return (
         <Accordion type="multiple" className="w-full">
-            {Object.keys(albums).sort().map(album => (
+            {sortedAlbums.map(album => (
                 <AccordionItem value={album} key={album}>
                     <AccordionTrigger className="font-headline text-lg flex items-center gap-2 text-primary hover:no-underline">
                         <Disc className="w-5 h-5"/> {album}
@@ -159,9 +166,14 @@ const AlbumList = ({ songs, onSelectSong, onEditSong, onOpenAddToPlaylist, onDel
     )
 }
 
-const GroupedList = ({ groupedSongs, onSelectSong, onEditSong, onOpenAddToPlaylist, onDeleteSong, currentSong }: Pick<SongListProps, 'groupedSongs' | 'onSelectSong' | 'onEditSong' | 'onOpenAddToPlaylist' | 'onDeleteSong' | 'currentSong'>) => (
+const GroupedList = ({ groupedSongs, onSelectSong, onEditSong, onOpenAddToPlaylist, onDeleteSong, currentSong }: Pick<SongListProps, 'groupedSongs' | 'onSelectSong' | 'onEditSong' | 'onOpenAddToPlaylist' | 'onDeleteSong' | 'currentSong'>) => {
+    const sortedGenres = Object.keys(groupedSongs).sort();
+
+    if (sortedGenres.length === 0) return <p className="text-center text-muted-foreground p-4">No genres found.</p>;
+    
+    return (
     <Accordion type="multiple" className="w-full" defaultValue={Object.keys(groupedSongs)}>
-        {Object.keys(groupedSongs).sort().map(genre => (
+        {sortedGenres.map(genre => (
             <AccordionItem value={genre} key={genre}>
                 <AccordionTrigger className="font-headline text-lg flex items-center gap-2 text-primary hover:no-underline">
                     <Music className="w-5 h-5"/> {genre}
@@ -196,7 +208,8 @@ const GroupedList = ({ groupedSongs, onSelectSong, onEditSong, onOpenAddToPlayli
             </AccordionItem>
         ))}
     </Accordion>
-);
+    );
+};
 
 const PlaylistView = ({ playlists, songs, currentSong, onSelectSong, onEditSong, onOpenAddToPlaylist, onDeleteSong, onCreatePlaylist, onDeletePlaylist, onOpenAddSongsToPlaylist }: Pick<SongListProps, 'playlists' | 'songs' | 'currentSong' | 'onSelectSong' | 'onEditSong' | 'onOpenAddToPlaylist' | 'onDeleteSong' | 'onCreatePlaylist' | 'onDeletePlaylist' | 'onOpenAddSongsToPlaylist'>) => {
     const [isAlertOpen, setIsAlertOpen] = useState(false);
@@ -301,7 +314,7 @@ export function SongList({ songs, groupedSongs, playlists, onSelectSong, onEditS
         return (
             <div className="text-center text-muted-foreground p-8">
                 <p className="font-headline text-lg">Your Library is Empty</p>
-                <p>Add songs by uploading a file below or sending an audio file to the Telegram bot.</p>
+                <p>Add songs by sending an audio file to the Telegram bot.</p>
             </div>
         )
     }
@@ -314,6 +327,40 @@ export function SongList({ songs, groupedSongs, playlists, onSelectSong, onEditS
             confirmDeleteSong(songToDelete.id);
         }
         setSongToDelete(null);
+    }
+    
+    const renderContent = (tabId: string) => {
+        switch(tabId) {
+            case 'songs':
+                return songs.length > 0 ? (
+                    <ul className="space-y-1">
+                        {songs.map(song => (
+                           <SongListItem key={song.id} song={song} currentSong={currentSong} onSelectSong={onSelectSong} onEditSong={onEditSong} onOpenAddToPlaylist={onOpenAddToPlaylist} onDeleteSong={onDeleteSong} />
+                        ))}
+                    </ul>
+                ) : <p className="text-center text-muted-foreground p-4">No songs found.</p>;
+            case 'playlists':
+                return <PlaylistView 
+                        playlists={playlists} 
+                        songs={songs} 
+                        currentSong={currentSong} 
+                        onSelectSong={onSelectSong} 
+                        onEditSong={onEditSong}
+                        onOpenAddToPlaylist={onOpenAddToPlaylist}
+                        onDeleteSong={onDeleteSong}
+                        onCreatePlaylist={onCreatePlaylist}
+                        onDeletePlaylist={onDeletePlaylist}
+                        onOpenAddSongsToPlaylist={onOpenAddSongsToPlaylist}
+                    />;
+            case 'grouped':
+                return <GroupedList groupedSongs={groupedSongs} onSelectSong={onSelectSong} onEditSong={onEditSong} onOpenAddToPlaylist={onOpenAddToPlaylist} onDeleteSong={onDeleteSong} currentSong={currentSong} />;
+            case 'artists':
+                return <ArtistList songs={songs} onSelectSong={onSelectSong} onEditSong={onEditSong} onOpenAddToPlaylist={onOpenAddToPlaylist} onDeleteSong={onDeleteSong} currentSong={currentSong} />;
+            case 'albums':
+                return <AlbumList songs={songs} onSelectSong={onSelectSong} onEditSong={onEditSong} onOpenAddToPlaylist={onOpenAddToPlaylist} onDeleteSong={onDeleteSong} currentSong={currentSong} />;
+            default:
+                return null;
+        }
     }
 
     return (
@@ -332,36 +379,11 @@ export function SongList({ songs, groupedSongs, playlists, onSelectSong, onEditS
                         )
                     })}
                 </TabsList>
-                <TabsContent value="songs" className="mt-4">
-                     <ul className="space-y-1">
-                        {songs.map(song => (
-                           <SongListItem key={song.id} song={song} currentSong={currentSong} onSelectSong={onSelectSong} onEditSong={onEditSong} onOpenAddToPlaylist={onOpenAddToPlaylist} onDeleteSong={onDeleteSong} />
-                        ))}
-                    </ul>
-                </TabsContent>
-                <TabsContent value="playlists" className="mt-4">
-                     <PlaylistView 
-                        playlists={playlists} 
-                        songs={songs} 
-                        currentSong={currentSong} 
-                        onSelectSong={onSelectSong} 
-                        onEditSong={onEditSong}
-                        onOpenAddToPlaylist={onOpenAddToPlaylist}
-                        onDeleteSong={onDeleteSong}
-                        onCreatePlaylist={onCreatePlaylist}
-                        onDeletePlaylist={onDeletePlaylist}
-                        onOpenAddSongsToPlaylist={onOpenAddSongsToPlaylist}
-                    />
-                </TabsContent>
-                <TabsContent value="grouped" className="mt-4">
-                    <GroupedList groupedSongs={groupedSongs} onSelectSong={onSelectSong} onEditSong={onEditSong} onOpenAddToPlaylist={onOpenAddToPlaylist} onDeleteSong={onDeleteSong} currentSong={currentSong} />
-                </TabsContent>
-                <TabsContent value="artists" className="mt-4">
-                    <ArtistList songs={songs} onSelectSong={onSelectSong} onEditSong={onEditSong} onOpenAddToPlaylist={onOpenAddToPlaylist} onDeleteSong={onDeleteSong} currentSong={currentSong} />
-                </TabsContent>
-                 <TabsContent value="albums" className="mt-4">
-                    <AlbumList songs={songs} onSelectSong={onSelectSong} onEditSong={onEditSong} onOpenAddToPlaylist={onOpenAddToPlaylist} onDeleteSong={onDeleteSong} currentSong={currentSong} />
-                </TabsContent>
+                {visibleTabs.map(tab => (
+                    <TabsContent key={tab.id} value={tab.id} className="mt-4">
+                        {renderContent(tab.id)}
+                    </TabsContent>
+                ))}
             </Tabs>
              <AlertDialog open={!!songToDelete} onOpenChange={(isOpen) => !isOpen && setSongToDelete(null)}>
                 <AlertDialogContent>
