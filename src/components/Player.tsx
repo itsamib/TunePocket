@@ -45,6 +45,8 @@ export default function Player({
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [colorPalette, setColorPalette] = useState<any>(null);
   const [showControls, setShowControls] = useState(true);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+
 
   const resetControlsTimeout = useCallback(() => {
     if (controlsTimeoutRef.current) {
@@ -72,7 +74,7 @@ export default function Player({
         clearTimeout(controlsTimeoutRef.current);
       }
     };
-  }, [isSheetOpen, resetControlsTimeout]);
+  }, [isSheetOpen, resetControlsTimeout, handleToggleControls]);
 
 
   useEffect(() => {
@@ -162,6 +164,22 @@ export default function Player({
     color: colorPalette?.LightVibrant?.hex || '#FFF',
   };
   
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartY(e.targetTouches[0].clientY);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartY === null) return;
+    const touchEndY = e.changedTouches[0].clientY;
+    const deltaY = touchEndY - touchStartY;
+    
+    // If swiped down by more than 100px
+    if (deltaY > 100) {
+      setIsSheetOpen(false);
+    }
+    setTouchStartY(null);
+  };
+
   if (!currentSong) return null;
 
   return (
@@ -208,7 +226,6 @@ export default function Player({
           side="bottom" 
           className="h-screen p-0 flex flex-col border-none text-white overflow-hidden" 
           style={{background: dynamicStyles.background}}
-          onClick={handleToggleControls}
         >
             <div 
               className={cn(
@@ -224,7 +241,12 @@ export default function Player({
               )} 
             />
           
-            <div className="relative z-10 flex flex-col h-full justify-between">
+            <div 
+                className="relative z-10 flex flex-col h-full justify-between"
+                onClick={handleToggleControls}
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+            >
                 <div 
                   className={cn(
                     "absolute top-0 left-0 right-0 p-6 transition-opacity duration-300",
