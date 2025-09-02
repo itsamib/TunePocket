@@ -37,6 +37,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@400;700&family=Belleza&display=swap" rel="stylesheet" />
         <script src="https://telegram.org/js/telegram-web-app.js"></script>
+        <script src="https://unpkg.com/vibrant.js@4.0.0-alpha.1/dist/vibrant.min.js"></script>
       </head>
       <body className="font-body antialiased">
         {children}
