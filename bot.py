@@ -13,7 +13,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 # for your local server (e.g., http://localhost:9002) and paste the ngrok URL here.
 
 # IMPORTANT: Replace with your actual Bot Token from BotFather
-BOT_TOKEN = "8317334769:AAHHl5uEcSbcvBjwXdnDXLmBuN41RMTC_w0"
+BOT_TOKEN = "8317334769:AAG1uFkrsdXwoyAyYH0YgL189eeWOcal4d8"
 # IMPORTANT: Replace with your PUBLIC Mini App URL.
 MINI_APP_URL = "https://your-mini-app-url.com"
 # ---------------------
